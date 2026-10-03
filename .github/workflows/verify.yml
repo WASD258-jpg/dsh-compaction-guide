@@ -95,37 +95,15 @@ jobs:
           EOF
 
       - name: Internal links resolve
-        run: |
-          node - <<'EOF'
-          const fs = require('node:fs')
-          const path = require('node:path')
-
-          const walk = (dir, out = []) => {
-            for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-              if (e.name === '.git' || e.name === 'node_modules') continue
-              const full = path.join(dir, e.name)
-              if (e.isDirectory()) walk(full, out)
-              else if (e.name.endsWith('.md')) out.push(full)
-            }
-            return out
-          }
-
-          const broken = []
-          for (const file of walk(process.cwd())) {
-            const text = fs.readFileSync(file, 'utf8')
-            for (const m of text.matchAll(/\]\(([^)#h][^)]*\.(?:md|mjs))\)/g)) {
-              const target = path.join(path.dirname(file), m[1])
-              if (!fs.existsSync(target)) {
-                broken.push(`${path.relative(process.cwd(), file)} -> ${m[1]}`)
-              }
-            }
-          }
-          if (broken.length) {
-            console.error('BROKEN links:\n' + broken.join('\n'))
-            process.exit(1)
-          }
-          console.log('all internal links resolve')
-          EOF
+        run: node verify-refs/check-links.mjs .
+        # The script carries its own self-test: it proves it still catches a real
+        # broken link and still ignores an example inside a code fence, and exits 2
+        # rather than reporting on the repository if either fails. A checker that
+        # passes unconditionally manufactures confidence instead of providing it.
+        #
+        # The fenced-example case is not hypothetical. TRANSLATING.md demonstrates
+        # link syntax with `NAME.md` placeholders; checking those reported two
+        # broken links that were never broken.
 
   language-pairs:
     name: bilingual pair consistency

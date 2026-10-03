@@ -29,6 +29,7 @@ done
 # Scripts that accept an optional path; give them the repo root.
 run verify-refs/lang-audit.mjs .
 run verify-refs/check-language-pairs.mjs .
+run verify-refs/check-links.mjs .
 
 mkdir -p /tmp/empty-sessions
 run tools/doctor.mjs /tmp/empty-sessions
