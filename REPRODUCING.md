@@ -67,7 +67,28 @@ real engines, so they need the harness packages installed. This repository
 declares them as `devDependencies`:
 
 ```sh
-pnpm install    # or: npm install
+pnpm install
+```
+
+**Use pnpm, not npm** — and the reason is one of this guide's own findings.
+
+`@argszero/cordis-plugin-length-stop-overflow@0.3.0` declares a peer range of
+`>=0.1.3-alpha.2 <0.1.4 || >=0.1.5-alpha.1 <0.2.0`, which **excludes 0.2.x** — the
+version it was measured working on [O15]. npm enforces peer ranges strictly and
+refuses to install:
+
+```
+npm error ERESOLVE unable to resolve dependency tree
+npm error peer @deepseek-ai/dsh-llm@">=0.1.3-alpha.2 <0.1.4 || ... <0.2.0"
+          from @argszero/cordis-plugin-length-stop-overflow@0.3.0
+```
+
+pnpm tolerates the mismatch. The peer range is a **packaging defect, not a
+functional barrier** — the plugin was imported and mounted successfully on
+`0.2.0-rc.2`, and `verify-argszero/` reproduces that. If you prefer npm:
+
+```sh
+npm install --legacy-peer-deps
 ```
 
 Installed versions are pinned to `0.2.0-rc.2` — the revision the measurements were
