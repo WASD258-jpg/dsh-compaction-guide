@@ -1,0 +1,158 @@
+name: verify
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  citations:
+    name: citation integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Every [S…]/[O…]/[P…] marker resolves, none unused
+        run: |
+          node - <<'EOF'
+          const fs = require('node:fs')
+          const path = require('node:path')
+
+          const root = process.cwd()
+          const walk = (dir, out = []) => {
+            for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+              if (e.name === '.git' || e.name === 'node_modules') continue
+              const full = path.join(dir, e.name)
+              if (e.isDirectory()) walk(full, out)
+              else if (e.name.endsWith('.md')) out.push(full)
+            }
+            return out
+          }
+
+          const refsFile = path.join(root, 'REFERENCES.md')
+          if (!fs.existsSync(refsFile)) {
+            console.error('REFERENCES.md missing')
+            process.exit(1)
+          }
+
+          const defined = new Set()
+          for (const m of fs.readFileSync(refsFile, 'utf8').matchAll(/\*\*([SOP]\d+[ab]?)\*\*/g)) {
+            defined.add(m[1])
+          }
+
+          const used = new Set()
+          for (const file of walk(root)) {
+            if (path.basename(file) === 'REFERENCES.md') continue
+            const text = fs.readFileSync(file, 'utf8')
+            for (const m of text.matchAll(/\[([SOP]\d+[ab]?)\]/g)) used.add(m[1])
+          }
+
+          const dangling = [...used].filter(k => !defined.has(k)).sort()
+          const unused = [...defined].filter(k => !used.has(k)).sort()
+
+          console.log(`defined: ${defined.size}, used: ${used.size}`)
+          if (dangling.length) {
+            console.error('DANGLING citations (used but not defined): ' + dangling.join(', '))
+          }
+          if (unused.length) {
+            console.error('UNUSED citations (defined but never cited): ' + unused.join(', '))
+          }
+          if (dangling.length || unused.length) process.exit(1)
+          console.log('citation graph closed')
+          EOF
+
+      - name: Internal links resolve
+        run: |
+          node - <<'EOF'
+          const fs = require('node:fs')
+          const path = require('node:path')
+
+          const walk = (dir, out = []) => {
+            for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+              if (e.name === '.git' || e.name === 'node_modules') continue
+              const full = path.join(dir, e.name)
+              if (e.isDirectory()) walk(full, out)
+              else if (e.name.endsWith('.md')) out.push(full)
+            }
+            return out
+          }
+
+          const broken = []
+          for (const file of walk(process.cwd())) {
+            const text = fs.readFileSync(file, 'utf8')
+            for (const m of text.matchAll(/\]\(([^)#h][^)]*\.(?:md|mjs))\)/g)) {
+              const target = path.join(path.dirname(file), m[1])
+              if (!fs.existsSync(target)) {
+                broken.push(`${path.relative(process.cwd(), file)} -> ${m[1]}`)
+              }
+            }
+          }
+          if (broken.length) {
+            console.error('BROKEN links:\n' + broken.join('\n'))
+            process.exit(1)
+          }
+          console.log('all internal links resolve')
+          EOF
+
+  scripts:
+    name: verification scripts run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: doctor.mjs runs (syntax + empty-corpus path)
+        run: |
+          mkdir -p /tmp/empty-sessions
+          node tools/doctor.mjs /tmp/empty-sessions
+
+      - name: doctor.mjs --json is valid JSON
+        run: |
+          mkdir -p /tmp/empty-sessions
+          node tools/doctor.mjs /tmp/empty-sessions --json | node -e "
+            let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{
+              const j=JSON.parse(s);
+              if(typeof j.sessionsAnalysed!=='number'){console.error('bad shape');process.exit(1)}
+              console.log('valid JSON, sessionsAnalysed='+j.sessionsAnalysed);
+            })"
+
+  docs:
+    name: documentation presence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Required documents exist
+        run: |
+          for f in README.md README.zh.md EVIDENCE.md PRIOR-ART.md PLAN.md REFERENCES.md LICENSE; do
+            if [ ! -f "$f" ]; then echo "missing: $f"; exit 1; fi
+            echo "ok: $f"
+          done
+
+      - name: package.json files[] covers required documents
+        run: |
+          node - <<'EOF'
+          const fs = require('node:fs')
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+          const files = pkg.files ?? []
+          const required = ['README.md', 'README.zh.md', 'EVIDENCE.md', 'PRIOR-ART.md', 'PLAN.md', 'REFERENCES.md', 'LICENSE']
+          const missing = required.filter(f => !files.includes(f))
+          if (missing.length) {
+            console.error('package.json files[] omits: ' + missing.join(', '))
+            process.exit(1)
+          }
+          console.log('package.json files[] covers all required documents')
+          EOF
+
+      - name: Both READMEs declare the citation convention
+        run: |
+          for f in README.md README.zh.md; do
+            if ! grep -q "REFERENCES.md" "$f"; then
+              echo "$f does not link REFERENCES.md"
+              exit 1
+            fi
+            echo "ok: $f"
+          done

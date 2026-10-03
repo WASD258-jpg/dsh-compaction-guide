@@ -1,0 +1,45 @@
+{
+  "name": "dsh-compaction-guide",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A guide to DeepSeek Harness automatic compaction: why long sessions break, what is already fixed, and what cannot be fixed by a plugin",
+  "type": "module",
+  "bin": {
+    "dsh-compaction-doctor": "./tools/doctor.mjs"
+  },
+  "files": [
+    "guide",
+    "tools",
+    "config",
+    "verify-refs",
+    "verify-config",
+    "verify-argszero",
+    "verify-feasibility",
+    "README.md",
+    "README.zh.md",
+    "EVIDENCE.md",
+    "PRIOR-ART.md",
+    "PLAN.md",
+    "REFERENCES.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "doctor": "node tools/doctor.mjs",
+    "doctor:json": "node tools/doctor.mjs --json",
+    "doctor:merge": "node tools/doctor.mjs --merge",
+    "check:refs": "node verify-refs/check-refs.mjs"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "compaction",
+    "context-management",
+    "guide",
+    "diagnostics",
+    "agent"
+  ],
+  "license": "MIT"
+}
