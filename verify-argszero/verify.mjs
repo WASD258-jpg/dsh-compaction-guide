@@ -3,11 +3,18 @@
 // The plugin declares a peer range ending at <0.2.0, so running it here was an
 // UNSTATED path. This is the measurement that closed that gap: not a source
 // reading, but a real import and a real Cordis mount.
+//
+// Prerequisites (see ../README.md#reproducing-the-verification-scripts):
+//   npm install @deepseek-ai/dsh-llm@0.2.0-rc.2 @deepseek-ai/cordis@4.0.4 \
+//     @argszero/cordis-plugin-length-stop-overflow@0.3.0
 
 import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
-const here = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))
+// fileURLToPath is required on Windows: `new URL(...).pathname` yields "/E:/..."
+// and createRequire cannot resolve a package.json from that form.
+const here = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(path.join(here, 'package.json'))
 
 function check(label, fn) {

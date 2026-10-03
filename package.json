@@ -1,45 +1,28 @@
 {
-  "name": "dsh-compaction-guide",
+  "name": "dsh-compaction-guide-verification",
   "version": "0.1.0",
   "private": true,
-  "description": "A guide to DeepSeek Harness automatic compaction: why long sessions break, what is already fixed, and what cannot be fixed by a plugin",
   "type": "module",
-  "bin": {
-    "dsh-compaction-doctor": "./tools/doctor.mjs"
+  "description": "Dependencies for reproducing the verification scripts in this repository. Not published; not needed to read the guide.",
+  "comment": "The guide itself has no runtime dependencies. This file exists only so the verify-*/ scripts can be re-run by a reader. Versions are pinned to the revision the measurements were taken against.",
+  "devDependencies": {
+    "@deepseek-ai/cordis": "4.0.4",
+    "@deepseek-ai/dsh-compaction-basic": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-compaction-tool-result-pruner": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-llm": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-session": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-session-projection": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-token-meter": "0.2.0-rc.2"
   },
-  "files": [
-    "guide",
-    "tools",
-    "config",
-    "verify-refs",
-    "verify-config",
-    "verify-argszero",
-    "verify-feasibility",
-    "README.md",
-    "README.zh.md",
-    "EVIDENCE.md",
-    "PRIOR-ART.md",
-    "PLAN.md",
-    "REFERENCES.md",
-    "LICENSE"
-  ],
+  "optionalDependencies": {
+    "@argszero/cordis-plugin-length-stop-overflow": "0.3.0"
+  },
   "scripts": {
-    "doctor": "node tools/doctor.mjs",
-    "doctor:json": "node tools/doctor.mjs --json",
-    "doctor:merge": "node tools/doctor.mjs --merge",
-    "check:refs": "node verify-refs/check-refs.mjs"
-  },
-  "engines": {
-    "node": ">=22.19.0"
-  },
-  "keywords": [
-    "deepseek-harness",
-    "dsh",
-    "compaction",
-    "context-management",
-    "guide",
-    "diagnostics",
-    "agent"
-  ],
-  "license": "MIT"
+    "verify:refs": "node verify-refs/check-refs.mjs",
+    "verify:config": "node verify-config/schema-test2.mjs",
+    "verify:risk": "node verify-config/risk-test.mjs",
+    "verify:reachability": "node verify-config/pathb-final.mjs",
+    "verify:argszero": "node verify-argszero/verify.mjs",
+    "verify:privacy": "node tools/privacy-check.mjs ."
+  }
 }

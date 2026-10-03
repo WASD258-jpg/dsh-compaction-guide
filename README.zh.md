@@ -330,6 +330,12 @@ threshold = floor(min(W × thresholdRatio, W − O − headroomTokens))
 
 ## 9. 复现本指南
 
+**每一项主张都注明了产出它的脚本。** 有的读上游源码，有的需要安装 harness 包，
+有的什么都不需要 —— 完整分类（含预期输出与失败症状）见
+[`REPRODUCING.md`](REPRODUCING.md)。
+
+两个无需任何前置条件的：
+
 ```sh
 # 去重计数 —— 面向用户的比率
 node tools/doctor.mjs "$DSH_HOME/sessions"
@@ -339,11 +345,32 @@ node tools/doctor.mjs "$DSH_HOME/sessions" --merge
 
 # 机器可读
 node tools/doctor.mjs "$DSH_HOME/sessions" --json
+
+# 隐私门禁
+node tools/privacy-check.mjs .
+```
+
+其余：
+
+```sh
+pnpm install                              # 将 harness 锁定到 0.2.0-rc.2
+pnpm verify:config                        # 配置正确性
+pnpm verify:risk                          # 残余风险
+pnpm verify:reachability                  # 服务可达性
+
+git clone https://github.com/deepseek-ai/deepseek-harness.git /tmp/dsh
+git -C /tmp/dsh checkout 5badb150         # 锁定引用所用的提交
+node verify-refs/check-refs.mjs /tmp/dsh  # 解析每一条 [S…] 引用
 ```
 
 源码声明可通过检出固定提交 [S0a][S0b] 并阅读所引行号验证。行号由
 [`verify-refs/check-refs.mjs`](verify-refs/check-refs.mjs) 解析 ——
-**版本变更后请重跑它**。
+**版本变更后请重跑它**；解析失败说明引用与所检出的版本不再匹配，而不是脚本坏了。
+
+> **可复现性状态。** 本仓库全部 20 个脚本，都在发布前针对固定依赖端到端跑过，
+> 语料数字（51 / 9 / 42 / 239）已确认可复现。按 [`REPRODUCING.md`](REPRODUCING.md)
+> 操作的读者应看到相同输出。**若有任何一项无法复现，那是值得上报的缺陷** ——
+> 本研究中三次验证尝试第一次都是错的，这里发布的是修正后的版本。
 
 ---
 

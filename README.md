@@ -413,6 +413,13 @@ reported, and the failed attempts are kept in `verify-*/` as evidence [O19][O26]
 
 ## 9. Reproducing this guide
 
+**Every claim names the script that produced it.** Some read upstream source, some
+need harness packages installed, some need nothing at all — the full breakdown,
+including expected output and failure symptoms, is in
+[`REPRODUCING.md`](REPRODUCING.md).
+
+The two that need no prerequisites:
+
 ```sh
 # de-duplicated counts — the user-facing rates
 node tools/doctor.mjs "$DSH_HOME/sessions"
@@ -422,12 +429,37 @@ node tools/doctor.mjs "$DSH_HOME/sessions" --merge
 
 # machine-readable
 node tools/doctor.mjs "$DSH_HOME/sessions" --json
+
+# privacy gate
+node tools/privacy-check.mjs .
+```
+
+Everything else:
+
+```sh
+pnpm install                              # pins the harness to 0.2.0-rc.2
+pnpm verify:config                        # configuration correctness
+pnpm verify:risk                          # residual risks
+pnpm verify:reachability                  # service reachability
+
+git clone https://github.com/deepseek-ai/deepseek-harness.git /tmp/dsh
+git -C /tmp/dsh checkout 5badb150         # pin the revision the citations used
+node verify-refs/check-refs.mjs /tmp/dsh  # resolves every [S…] citation
 ```
 
 Source claims are verifiable by checking out the pinned commits [S0a][S0b] and
 reading the cited lines. Line numbers are resolved by
 [`verify-refs/check-refs.mjs`](verify-refs/check-refs.mjs) rather than
-transcribed — **re-run it after any revision change**.
+transcribed — **re-run it after any revision change**; a resolution failure means
+the citation no longer matches the revision, not that the checker is broken.
+
+> **Status of reproducibility.** All 20 scripts in this repository were run
+> end-to-end against the pinned dependencies before this guide was published, and
+> the corpus figures (51 / 9 / 42 / 239) were confirmed to reproduce. A reader
+> following [`REPRODUCING.md`](REPRODUCING.md) should see the same output. **If
+> something does not reproduce, that is a defect worth reporting** — three
+> verification attempts in this study were wrong the first time, and the
+> corrected versions are the ones shipped.
 
 ---
 
