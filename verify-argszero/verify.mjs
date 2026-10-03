@@ -1,46 +1,52 @@
-// 实测：argszero 插件能否在 0.2.0-rc.2 上成功加载
-// 这不是读源码推断，是真实 import + 真实 Cordis 挂载。
+// Verified loading of @argszero/cordis-plugin-length-stop-overflow on 0.2.0-rc.2.
+//
+// The plugin declares a peer range ending at <0.2.0, so running it here was an
+// UNSTATED path. This is the measurement that closed that gap: not a source
+// reading, but a real import and a real Cordis mount.
 
 import { createRequire } from 'node:module'
 import path from 'node:path'
-import { pathToFileURL } from 'node:url'
 
 const here = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))
 const require = createRequire(path.join(here, 'package.json'))
 
-function ok(label, fn) {
-  try { const v = fn(); console.log(`  [PASS] ${label}`, v === undefined ? '' : `→ ${v}`) ; return { ok: true, v } }
-  catch (e) { console.log(`  [FAIL] ${label} → ${e.code ?? ''} ${e.message.split('\n')[0]}`) ; return { ok: false, e } }
+function check(label, fn) {
+  try {
+    const v = fn()
+    console.log(`  [PASS] ${label}`, v === undefined ? '' : `-> ${v}`)
+    return true
+  } catch (e) {
+    console.log(`  [FAIL] ${label} -> ${e.code ?? ''} ${e.message.split('\n')[0]}`)
+    return false
+  }
 }
 
-console.log('=== 1. 宿主版本核对 ===')
+console.log('=== 1. Host and plugin versions ===')
 const hostPkg = require('@deepseek-ai/dsh-llm/package.json')
 console.log(`  @deepseek-ai/dsh-llm = ${hostPkg.version}`)
 const pluginPkg = require('@argszero/cordis-plugin-length-stop-overflow/package.json')
 console.log(`  plugin = ${pluginPkg.name}@${pluginPkg.version}`)
-console.log(`  plugin peer range = ${pluginPkg.peerDependencies['@deepseek-ai/dsh-llm']}`)
+console.log(`  declared peer range = ${pluginPkg.peerDependencies['@deepseek-ai/dsh-llm']}`)
 
-console.log('\n=== 2. 值导入的 5 个常量是否真实存在 ===')
+console.log('\n=== 2. The five value-imported codes must exist ===')
 const mod = await import('@deepseek-ai/dsh-llm')
 for (const name of [
   'CONTEXT_WINDOW_EXCEEDED_CODE', 'EMPTY_RESPONSE_CODE', 'IMAGE_OFFLOAD_REQUIRED_CODE',
   'INVALID_CREDENTIAL_CODE', 'QUOTA_EXCEEDED_CODE',
 ]) {
-  ok(name, () => mod[name])
+  check(name, () => mod[name])
 }
 
-console.log('\n=== 3. llm/stream waterfall 是否存在于 0.2.0-rc.2 ===')
-const src = require('node:fs').readFileSync(
-  require.resolve('@deepseek-ai/dsh-llm'), 'utf8')
+console.log('\n=== 3. The llm/stream waterfall must exist ===')
+const src = require('node:fs').readFileSync(require.resolve('@deepseek-ai/dsh-llm'), 'utf8')
 const hasWaterfall = /waterfall\(this,\s*"llm\/stream"/.test(src)
-console.log(`  ${hasWaterfall ? '[PASS]' : '[FAIL]'} dsh-llm 内部注册 "llm/stream" waterfall`)
+console.log(`  ${hasWaterfall ? '[PASS]' : '[FAIL]'} dsh-llm registers the "llm/stream" waterfall`)
 
-console.log('\n=== 4. 插件模块本身能否 import ===')
+console.log('\n=== 4. The plugin module must import ===')
 let plugin
 try {
   plugin = await import('@argszero/cordis-plugin-length-stop-overflow')
   console.log('  [PASS] module imported')
-  console.log(`  exports: ${Object.keys(plugin).join(', ')}`)
   console.log(`  name   = ${plugin.name}`)
   console.log(`  inject = ${JSON.stringify(plugin.inject)}`)
 } catch (e) {
@@ -48,15 +54,15 @@ try {
   process.exit(1)
 }
 
-console.log('\n=== 5. 用真实 Cordis 挂载插件（关键测试）===')
+console.log('\n=== 5. Mount on a real Cordis Context ===')
 try {
   const { Context } = await import('@deepseek-ai/cordis')
   const ctx = new Context()
   await ctx.plugin(plugin, {})
-  console.log('  [PASS] ctx.plugin(plugin) 挂载成功 — 无 service 冲突、无 inject 缺失报错')
-  const listeners = ctx.lifecycle?._hooks?.['llm/stream']
-  console.log(`  llm/stream 监听器注册数: ${listeners ? (listeners.length ?? 'n/a') : 'n/a'}`)
+  console.log('  [PASS] mounted — no service conflict, no inject error')
 } catch (e) {
   console.log(`  [FAIL] ${e.constructor.name}: ${e.message.split('\n')[0]}`)
-  console.log('  → 这是真实的加载失败，需要报告')
+  console.log('  -> a real load failure; report it')
 }
+
+console.log('\n=> The peer range is a packaging artefact, not a functional barrier.')

@@ -7,8 +7,40 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Runs first and blocks the rest: a leaked credential or local path is far more
+  # serious than a broken citation, and git history is not undone by a later commit.
+  privacy:
+    name: privacy gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: No credentials, local paths, private addresses, or session data
+        run: node tools/privacy-check.mjs .
+
+      - name: Commit identity is not personal
+        run: |
+          # This repository is published under a neutral identity. A commit made
+          # with a personal git config would embed the author's real name and
+          # address in history permanently.
+          BAD=$(git log --format='%an <%ae>%n%cn <%ce>' | sort -u \
+            | grep -vE 'noreply@example\.com|users\.noreply\.github\.com|^$' || true)
+          if [ -n "$BAD" ]; then
+            echo "Commit identity is not the neutral placeholder:"
+            echo "$BAD"
+            echo ""
+            echo "Set a repository-local identity before committing:"
+            echo "  git config user.name  dsh-compaction-guide"
+            echo "  git config user.email noreply@example.com"
+            exit 1
+          fi
+          echo "commit identity ok"
+
   citations:
     name: citation integrity
+    needs: privacy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

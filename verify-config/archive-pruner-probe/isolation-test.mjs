@@ -1,59 +1,59 @@
-// 查明 Cordis 服务隔离：为何 ctx.get() 取不到已挂载的服务？
-// 这决定插件能否访问其他插件的服务 —— 是路径 B 的最后机会。
+// ARCHIVED FAILED ATTEMPT — see archive-pruner-probe/README.md.
+//
+// This attempt produced a MISLEADING conclusion: it reported "unreachable" for a
+// service that had never been registered, then generalised that to "plugins
+// cannot access other plugins' services" — a claim the harness could not support.
+//
+// Kept because the failure mode is instructive and it recurred three times in
+// this study.
 
 import { Context } from '@deepseek-ai/cordis'
 import Pruner from '@deepseek-ai/dsh-compaction-tool-result-pruner'
 import TokenMeter from '@deepseek-ai/dsh-token-meter'
 
-console.log('=== 实验 1：同层挂载，服务是否可见 ===')
+console.log('=== Experiment 1: same-layer mount, is the service visible? ===')
 {
   const ctx = new Context()
   await ctx.plugin(TokenMeter)
   await ctx.plugin(Pruner, {})
-  console.log(`  同 ctx 挂载后 ctx.get('tokenMeter') → ${ctx.get('tokenMeter') !== undefined ? '可见 ✓' : '不可见 ✗'}`)
-  console.log(`  同 ctx 挂载后 ctx.get('toolResultPruner') → ${ctx.get('toolResultPruner') !== undefined ? '可见 ✓' : '不可见 ✗'}`)
+  console.log(`  ctx.get('tokenMeter')       -> ${ctx.get('tokenMeter') !== undefined ? 'visible' : 'NOT visible'}`)
+  console.log(`  ctx.get('toolResultPruner') -> ${ctx.get('toolResultPruner') !== undefined ? 'visible' : 'NOT visible'}`)
 }
 
-console.log('\n=== 实验 2：isolate 是否影响可见性 ===')
+console.log('\n=== Experiment 2: does isolate affect visibility? ===')
 {
   const ctx = new Context()
   await ctx.plugin(TokenMeter)
   const isolated = ctx.isolate('test')
   await isolated.plugin(Pruner, {})
-  console.log(`  isolate 内挂载后，外层 ctx.get('toolResultPruner') → ${ctx.get('toolResultPruner') !== undefined ? '可见' : '不可见'}`)
-  console.log(`  isolate 内自己 get('toolResultPruner') → ${isolated.get('toolResultPruner') !== undefined ? '可见' : '不可见'}`)
+  console.log(`  outer ctx.get('toolResultPruner') -> ${ctx.get('toolResultPruner') !== undefined ? 'visible' : 'NOT visible'}`)
+  console.log(`  inner get('toolResultPruner')     -> ${isolated.get('toolResultPruner') !== undefined ? 'visible' : 'NOT visible'}`)
 }
 
-console.log('\n=== 实验 3：Service 子类是否自动 provide ===')
+console.log('\n=== Experiment 3: does a Service subclass auto-provide? ===')
 {
   const ctx = new Context()
   await ctx.plugin(TokenMeter)
   await ctx.plugin(Pruner, {})
-  // 遍历 root 的 props 看注册了什么
   const root = ctx.root ?? ctx
-  const props = root[symbols_props()] ?? root.props ?? {}
-  const names = Object.keys(props)
-  console.log(`  root.props 中的服务名: ${names.length ? names.join(', ') : '(空)'}`)
+  const names = Object.keys(root.props ?? {})
+  console.log(`  root.props service names: ${names.length ? names.join(', ') : '(empty)'}`)
 }
 
-function symbols_props() {
-  return Symbol.for('cordis.props')
-}
-
-console.log('\n=== 实验 4：用 ctx.get 的容错形式 ===')
+console.log('\n=== Experiment 4: alternative access forms ===')
 {
   const ctx = new Context()
   await ctx.plugin(TokenMeter)
   await ctx.plugin(Pruner, {})
-  // 有的实现要求通过 ctx.root.get 或带 scope
-  console.log(`  ctx.get('toolResultPruner')        → ${ctx.get('toolResultPruner') !== undefined}`)
-  console.log(`  ctx.root?.get?.('toolResultPruner') → ${ctx.root?.get?.('toolResultPruner') !== undefined}`)
+  console.log(`  ctx.get('toolResultPruner')         -> ${ctx.get('toolResultPruner') !== undefined}`)
+  console.log(`  ctx.root?.get?.('toolResultPruner') -> ${ctx.root?.get?.('toolResultPruner') !== undefined}`)
 }
 
-console.log('\n=== 结论 ===')
-console.log('  若所有路径都不可见，则：')
-console.log('    · 插件无法访问其他插件的服务实例')
-console.log('    · 路径 B（主动 prune）不可行')
-console.log('    · 插件能做的只剩：观测事件 + 写日志')
+console.log('\n=== Conclusion ===')
+console.log('  Nothing is visible — but that is because NOTHING REGISTERED.')
+console.log('  Each plugin declares its own inject, and a bare Context satisfies none')
+console.log('  of them, so no service is ever provided.')
 console.log('')
-console.log('  这与「无法阻断压缩」的结论一致 —— 插件层能做的事非常有限。')
+console.log('  This script states its finding far too broadly. The corrected result is')
+console.log('  in ../depchain-test.mjs and ../pathb-final.mjs: with the full chain')
+console.log('  mounted, the service IS reachable and callable [O26].')

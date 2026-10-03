@@ -1,5 +1,9 @@
-// 验证我推荐配置的残余风险——特别是「拼错 provider 名」的失败时机。
-// 如果它在加载时不报错、到压缩时才失败，用户会以为配好了，直到会话炸掉才发现。
+// Measure the residual risks of the recommended configuration.
+//
+// The highest-severity risk is the *timing* of a failure: if a mistyped
+// summarization provider is accepted at load and fails only when compaction first
+// runs, the user will believe the configuration works — until a session breaks,
+// possibly hours later, with no visible connection to the typo.
 
 import { Context } from '@deepseek-ai/cordis'
 import { BasicCompactionEngine } from '@deepseek-ai/dsh-compaction-basic'
@@ -14,46 +18,47 @@ function construct(config) {
   }
 }
 
-console.log('=== 风险1：拼错/不存在的 provider 名，何时失败？ ===\n')
+console.log('=== Risk 1: when does a mistyped summarization target fail? ===\n')
 const cases = [
-  ['不存在的 provider', { summarizationProvider: 'nonexistent-provider', summarizationModel: 'some-model' }],
-  ['不存在的 model', { summarizationProvider: 'deepseek-official', summarizationModel: 'no-such-model-xyz' }],
-  ['空串对（=默认行为）', { summarizationProvider: '', summarizationModel: '' }],
+  ['non-existent provider', { summarizationProvider: 'nonexistent-provider', summarizationModel: 'some-model' }],
+  ['non-existent model', { summarizationProvider: 'deepseek-official', summarizationModel: 'no-such-model-xyz' }],
+  ['empty pair (= default behaviour)', { summarizationProvider: '', summarizationModel: '' }],
 ]
 for (const [label, cfg] of cases) {
   const r = construct(cfg)
   console.log(`  ${label}:`)
-  console.log(`    构造阶段 → ${r.ok ? 'PASS（不校验存在性）' : 'FAIL: ' + r.err}`)
+  console.log(`    construct phase -> ${r.ok ? 'PASS (existence is not validated)' : 'FAIL: ' + r.err}`)
 }
 
-console.log('\n  → 若构造阶段全部 PASS，说明 provider 存在性只在【首次压缩调用】时才暴露。')
-console.log('    这是用户必须知道的风险：配置错误会在会话跑到阈值时才炸。')
+console.log('\n  -> Construction does not resolve the target. The name is checked only')
+console.log('     at the FIRST summarization call, so a typo is indistinguishable')
+console.log('     from a working configuration until a session reaches the threshold.')
 
-console.log('\n=== 风险2：maxTokens 调小会不会引入「摘要截断」这个新失败模式？ ===\n')
-console.log('  官方 finishError() 对 max-tokens 的处理：')
-console.log('    case "max-tokens": return Error("summarization truncated at the token cap")')
-console.log('    → 摘要被截断 = 压缩失败，且写进 compaction/end 的 error')
+console.log('\n=== Risk 2: does a lower maxTokens introduce a truncation failure? ===\n')
+console.log('  finishError() maps a max-tokens finish to:')
+console.log('    new Error("summarization truncated at the token cap (incomplete checkpoint)")')
+console.log('  -> A truncated summary is a compaction FAILURE, recorded as such.')
 console.log('')
-console.log('  我的推荐 maxTokens=32768（默认是 headroomTokens=65536）')
-console.log('  → 摘要输出上限砍半。若真实摘要需要 >32768 token，就会触发截断失败。')
-console.log('')
-console.log('  实测语料里的摘要规模（来自 doctor.mjs 统计）：')
-console.log('    最大 4963 token，中位 4312 token  ← 远低于 32768')
-console.log('  → 就本语料而言安全，但这是【单语料观测】，不是保证。')
+console.log('  Recommended maxTokens = 32768 (default is headroomTokens = 65536).')
+console.log('  -> The summary output cap is halved. A summary needing more than the cap')
+console.log('     would fail. Observed summary sizes in the analysed corpus:')
+console.log('     max 4963 tokens, median 4312 [O23] — well under the cap.')
+console.log('  -> Safe for this corpus, but that is ONE corpus, not a bound.')
 
-console.log('\n=== 风险3：thresholdRatio 0.5 的成本影响 ===\n')
+console.log('\n=== Risk 3: cost impact of thresholdRatio 0.5 ===\n')
 const W = 1000000, O = 256000
-for (const [label, ratio, hr] of [['默认 0.8', 0.8, 65536], ['推荐 0.5', 0.5, 32768]]) {
+for (const [label, ratio, hr] of [['default 0.8', 0.8, 65536], ['recommended 0.5', 0.5, 32768]]) {
   const thr = Math.floor(Math.min(W * ratio, W - O - hr))
-  console.log(`  ${label}: 阈值 ${thr.toLocaleString()} token`)
+  console.log(`  ${label}: trigger at ${thr.toLocaleString()} tokens`)
 }
-console.log('  → 阈值降低 26%，意味着【压缩触发更频繁】= 更多次摘要 LLM 调用 = 更高成本。')
-console.log('    每次压缩都是一次完整的模型调用（重放整个被压缩区）。')
-console.log('    这是我推荐里的真实代价，之前没写出来。')
+console.log('  -> A 26% earlier trigger means MORE compaction runs, and every run is a')
+console.log('     full model call replaying the compacted region [S6].')
+console.log('     This is a real token cost and was not stated in earlier drafts.')
 
-console.log('\n=== 风险4：compactionRetries / maxOverflowRetries 调高的代价 ===\n')
-console.log('  compactionRetries: 1 → 2：压力仍高于阈值时多试一次 = 多一次模型调用')
-console.log('  maxOverflowRetries: 1 → 3：溢出恢复多试两次')
-console.log('  → 在【机制A未修复】的前提下，溢出恢复根本不会触发（413 被误分类），')
-console.log('    所以 maxOverflowRetries 调高在当前版本下是【无效配置】——')
-console.log('    除非同时装了 argszero 的插件把它重新分类。')
+console.log('\n=== Risk 4: raising the retry budgets ===\n')
+console.log('  compactionRetries 1 -> 2: one extra attempt when pressure stays high')
+console.log('  maxOverflowRetries 1 -> 3: two extra overflow-recovery attempts')
+console.log('  -> While Mechanism A is unfixed, the overflow path is never reached')
+console.log('     (a 413 is classified INVALID_REQUEST, not CONTEXT_WINDOW_EXCEEDED),')
+console.log('     so maxOverflowRetries is INERT on a stock host.')
+console.log('     It becomes meaningful only alongside a reclassification plugin [P1].')

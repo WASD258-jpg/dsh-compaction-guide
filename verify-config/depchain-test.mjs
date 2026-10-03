@@ -1,29 +1,20 @@
-// 忠实测试：用真实 dsh 配置引导完整依赖链，再检查插件能否访问服务。
-// 裸 Context 缺依赖链，之前的否定结论无效。
+// Build the dependency chain, then check whether a plugin can reach the services.
+//
+// An earlier attempt used a bare Context and reported the pruner service as
+// unreachable. That conclusion was wrong: the chain is
+//
+//   session -> sessionProjections -> tokenMeter -> pruner
+//
+// and a bare Context registers none of it, so ctx.get() returned undefined. That
+// is indistinguishable from "the service is not exposed to plugins" unless you
+// check whether anything registered at all.
 
 import { Context } from '@deepseek-ai/cordis'
-import Pruner from '@deepseek-ai/dsh-compaction-tool-result-pruner'
-import TokenMeter from '@deepseek-ai/dsh-token-meter'
 
-// 依赖链（从两者 static inject 反推）：
-//   TokenMeter.inject = ['sessionProjections']
-//   Pruner.inject     = ['tokenMeter']
-
-console.log('=== 逐步构建依赖链 ===\n')
+console.log('=== Building the dependency chain step by step ===\n')
 
 const ctx = new Context()
 
-// 第 1 层：sessionProjections 的提供者
-let SessionProjection
-try {
-  SessionProjection = (await import('@deepseek-ai/dsh-session-projection')).default
-  console.log('  session-projection 可用:', typeof SessionProjection)
-  console.log('  其 inject:', JSON.stringify(SessionProjection.inject ?? null))
-} catch (e) {
-  console.log('  session-projection 不可用:', e.message.split('\n')[0])
-}
-
-// 尝试按依赖顺序挂载
 const order = [
   ['session', () => import('@deepseek-ai/dsh-session').then(m => m.default ?? m)],
   ['session-projection', () => import('@deepseek-ai/dsh-session-projection').then(m => m.default ?? m)],
@@ -34,29 +25,27 @@ const order = [
 for (const [label, load] of order) {
   try {
     const plugin = await load()
-    if (typeof plugin !== 'function') { console.log(`  ${label}: 非函数导出，跳过`); continue }
+    if (typeof plugin !== 'function') { console.log(`  ${label}: not a function export, skipped`); continue }
     await ctx.plugin(plugin, {})
-    // 给 effect 一点时间
     await new Promise(r => setTimeout(r, 50))
-    const props = Object.keys(ctx.props ?? {})
-    console.log(`  ${label}: 挂载成功 | props 现在有: ${props.join(', ') || '(空)'}`)
+    console.log(`  ${label}: mounted`)
   } catch (e) {
-    console.log(`  ${label}: 失败 → ${e.message.split('\n')[0]}`)
+    console.log(`  ${label}: failed -> ${e.message.split('\n')[0]}`)
   }
 }
 
-console.log('\n=== 最终服务可见性 ===')
+console.log('\n=== Service visibility after the full chain ===')
 for (const name of ['tokenMeter', 'toolResultPruner', 'sessionProjections']) {
   const v = ctx.get(name)
-  console.log(`  ctx.get('${name}') → ${v !== undefined ? '可见 ✓' : 'undefined'}`)
+  console.log(`  ctx.get('${name}') -> ${v !== undefined ? 'visible' : 'undefined'}`)
 }
 
-console.log('\n=== 判定 ===')
-const anyVisible = ['tokenMeter', 'toolResultPruner'].some(n => ctx.get(n) !== undefined)
-if (anyVisible) {
-  console.log('  ✓ 服务可达 —— 路径 B 前提成立')
-  console.log('  前一轮的「不可达」结论是我测试台不忠实造成的（缺依赖链）')
+console.log('\n=== Verdict ===')
+const visible = ['tokenMeter', 'toolResultPruner'].some(n => ctx.get(n) !== undefined)
+if (visible) {
+  console.log('  Services ARE reachable. The earlier "unreachable" result was a')
+  console.log('  test-harness artefact, not a property of the system.')
 } else {
-  console.log('  ✗ 依赖链仍不完整，无法判定')
-  console.log('  → 结论必须标注为「未定论」，不能声称插件做不到')
+  console.log('  Chain still incomplete — the question is UNRESOLVED, not answered.')
+  console.log('  Do not report "plugins cannot reach services" from this.')
 }
