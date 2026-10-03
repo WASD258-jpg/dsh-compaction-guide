@@ -1,3 +1,5 @@
+**English** | [中文](quick-guide.zh.md)
+
 # Quick guide — what to do about slow, broken, or dying sessions
 
 > Part of the [dsh-compaction-guide](../README.md). Citations `[S…]`/`[O…]`/`[P…]`

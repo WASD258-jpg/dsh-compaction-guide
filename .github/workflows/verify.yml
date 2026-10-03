@@ -127,6 +127,41 @@ jobs:
           console.log('all internal links resolve')
           EOF
 
+  language-pairs:
+    name: bilingual pair consistency
+    needs: privacy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Every document is paired, switchers point both ways, structures match
+        run: node verify-refs/check-language-pairs.mjs .
+
+      - name: Anchor links resolve, within and across files
+        run: |
+          # An anchor that does not resolve still renders as a clickable link, so a
+          # reader lands at the top of the target file with no indication of what
+          # went wrong. A `#7-…` anchor against a section that had moved to `#8-…`
+          # survived in both language versions until this check existed.
+          #
+          # The check runs inside check-language-pairs.mjs; asserting a known-bad
+          # anchor is rejected proves it is actually evaluating them rather than
+          # passing unconditionally.
+          tmp=$(mktemp -d)
+          printf '# T\n\n## A Section\n\n[bad](other.md#99-nonexistent)\n' > "$tmp/a.md"
+          printf '# Other\n' > "$tmp/other.md"
+          if node verify-refs/check-language-pairs.mjs "$tmp" 2>&1 | grep -q '99-nonexistent'; then
+            echo "ok: a non-existent anchor is reported"
+          else
+            echo "FAIL: the anchor check did not report a known-bad anchor"
+            rm -rf "$tmp"
+            exit 1
+          fi
+          rm -rf "$tmp"
+
   scripts:
     name: verification scripts run
     runs-on: ubuntu-latest
@@ -198,7 +233,7 @@ jobs:
 
       - name: Required documents exist
         run: |
-          for f in README.md README.zh.md EVIDENCE.md PRIOR-ART.md PLAN.md REFERENCES.md LICENSE; do
+          for f in README.md README.zh.md EVIDENCE.md EVIDENCE.zh.md PRIOR-ART.md PRIOR-ART.zh.md PLAN.md PLAN.zh.md REFERENCES.md REFERENCES.zh.md REPRODUCING.md REPRODUCING.zh.md TRANSLATING.md LICENSE; do
             if [ ! -f "$f" ]; then echo "missing: $f"; exit 1; fi
             echo "ok: $f"
           done
@@ -209,7 +244,7 @@ jobs:
           const fs = require('node:fs')
           const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
           const files = pkg.files ?? []
-          const required = ['README.md', 'README.zh.md', 'EVIDENCE.md', 'PRIOR-ART.md', 'PLAN.md', 'REFERENCES.md', 'LICENSE']
+          const required = ['README.md', 'README.zh.md', 'EVIDENCE.md', 'EVIDENCE.zh.md', 'PRIOR-ART.md', 'PRIOR-ART.zh.md', 'PLAN.md', 'PLAN.zh.md', 'REFERENCES.md', 'REFERENCES.zh.md', 'REPRODUCING.md', 'REPRODUCING.zh.md', 'TRANSLATING.md', 'LICENSE']
           const missing = required.filter(f => !files.includes(f))
           if (missing.length) {
             console.error('package.json files[] omits: ' + missing.join(', '))

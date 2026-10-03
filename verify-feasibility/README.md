@@ -1,3 +1,5 @@
+**English** | [中文](README.zh.md)
+
 # Feasibility — why a circuit-breaker plugin cannot be built
 
 Backs [O24] and the closure of Gap 4 in [`../PLAN.md`](../PLAN.md).
@@ -92,8 +94,15 @@ None of these *prevents* an attempt, which is what a breaker is for.
 
 ```sh
 node assess.mjs                # core logic, and the misleading reduction figure
-node feasibility.mjs           # shows the in-body call
-node intervention-points.mjs   # enumerates all points
+node feasibility.mjs <checkout>  # shows the in-body call
+node intervention-points.mjs <checkout>  # enumerates all points
 ```
 
-Requires a checkout of the upstream source at `E:\DSH-Lab\src` (or edit the paths).
+The two source-reading scripts take an upstream checkout path, as an argument or
+via `DSH_SRC`:
+
+```sh
+git clone https://github.com/deepseek-ai/deepseek-harness.git /tmp/dsh
+node feasibility.mjs /tmp/dsh
+DSH_SRC=/tmp/dsh node intervention-points.mjs
+```

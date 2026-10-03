@@ -1,3 +1,5 @@
+**English** | [中文](README.zh.md)
+
 # Verification — configuration blocks against a real host
 
 Backs [O19]–[O23], [O26] and the guidance in [`../config/README.md`](../config/README.md).

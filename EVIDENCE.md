@@ -1,3 +1,5 @@
+**English** | [中文](EVIDENCE.zh.md)
+
 # EVIDENCE — measurement, reproduction, validity
 
 > **Relationship to [`README.md`](README.md).** The README states findings; this

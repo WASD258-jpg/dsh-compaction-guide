@@ -135,7 +135,8 @@ if (failure.code !== CONTEXT_WINDOW_EXCEEDED_CODE) return next()
 
 用户可见的**交接**状态**不是**由压缩失败导致的 [O12]。被交接的会话在交接当下
 `failedEnds = 0` 且压缩次数为零；链条是：请求失败 → 无压缩 → 卡死 →
-**用户运行 `/rescue`** → 交接。
+**用户运行 `/rescue`** → 交接，其中 `session/title` 与 `handoffs.jsonl.at`
+共享同一个毫秒时间戳 `1789659712327`，且触发事件的 `source.kind` 为 `"user"` [O12]。
 
 **怎么办**：[`guide/quick-guide.md` §3](guide/quick-guide.md)。
 

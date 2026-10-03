@@ -1,4 +1,4 @@
-> **English** | [中文](README.zh.md)
+**English** | [中文](PRIOR-ART.zh.md)
 
 # PRIOR-ART — what already exists, and what does not
 

@@ -1,3 +1,5 @@
+**English** | [中文](REFERENCES.zh.md)
+
 # References
 
 > **Citation discipline.** Every factual claim in this repository carries an
@@ -68,7 +70,7 @@ differ, both are given.
 
 Each entry names the artifact that reproduces it. All counts are from one user's
 session corpus unless stated otherwise; see
-[EVIDENCE §7](EVIDENCE.md#7-threats-to-validity) for the implications.
+[EVIDENCE §8](EVIDENCE.md#8-threats-to-validity) for the implications.
 
 | Id | Observation | Reproduced by |
 |---|---|---|

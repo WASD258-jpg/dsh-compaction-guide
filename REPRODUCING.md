@@ -1,3 +1,5 @@
+**English** | [中文](REPRODUCING.zh.md)
+
 # Reproducing the verification scripts
 
 > Every claim in this repository names the script that produced it. This page

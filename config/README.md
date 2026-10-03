@@ -1,3 +1,5 @@
+**English** | [中文](README.zh.md)
+
 # dsh-FixCompaction — configuration hardening
 
 Zero-code mitigations. Nothing here modifies any file under the DSH installation.

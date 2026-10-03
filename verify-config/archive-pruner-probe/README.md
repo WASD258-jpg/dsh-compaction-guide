@@ -1,3 +1,5 @@
+**English** | [中文](README.zh.md)
+
 # Archive — five failed attempts to answer one question
 
 **These scripts are kept as evidence, not as working code.** They produced the

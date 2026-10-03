@@ -16,10 +16,16 @@
     "README.md",
     "README.zh.md",
     "EVIDENCE.md",
+    "EVIDENCE.zh.md",
     "PRIOR-ART.md",
+    "PRIOR-ART.zh.md",
     "PLAN.md",
+    "PLAN.zh.md",
     "REFERENCES.md",
+    "REFERENCES.zh.md",
     "REPRODUCING.md",
+    "REPRODUCING.zh.md",
+    "TRANSLATING.md",
     "LICENSE"
   ],
   "devDependencies": {
