@@ -26,8 +26,18 @@ node tools/doctor.mjs "$DSH_HOME/sessions"
 node tools/doctor.mjs "$DSH_HOME/sessions" --json
 node tools/doctor.mjs "$DSH_HOME/sessions" --merge
 
-# privacy gate
+# privacy gate — takes a repository root
 node tools/privacy-check.mjs .
+```
+
+**`doctor.mjs` needs a sessions directory that exists.** With no argument it uses
+`$DSH_HOME/sessions` and **exits 2 if that path is absent** — which is what happens
+on a machine that has never run the harness. Pass an explicit path, or an empty
+directory if you only want to confirm the script runs:
+
+```sh
+mkdir -p /tmp/empty-sessions
+node tools/doctor.mjs /tmp/empty-sessions
 ```
 
 ---

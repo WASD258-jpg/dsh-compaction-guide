@@ -162,25 +162,7 @@ jobs:
         # simply keep working.
 
       - name: Every .mjs in the repository executes
-        run: |
-          # This job exists because scripts that cannot run make every claim they
-          # support unverifiable. A script is acceptable here if it exits 0, or
-          # exits non-zero while printing a usage message (for the ones that
-          # require an upstream checkout path).
-          fail=0
-          for f in $(find . -name '*.mjs' -not -path './node_modules/*' | sort); do
-            out=$(node "$f" 2>&1) && code=0 || code=$?
-            if [ "$code" -eq 0 ]; then
-              echo "ok    $f"
-            elif echo "$out" | grep -q '^Usage:'; then
-              echo "usage $f"
-            else
-              echo "FAIL  $f (exit $code)"
-              echo "$out" | head -5 | sed 's/^/        /'
-              fail=1
-            fi
-          done
-          exit $fail
+        run: bash verify-refs/ci-preflight.sh
 
       - name: Citation checker rejects a wrong path
         run: |
