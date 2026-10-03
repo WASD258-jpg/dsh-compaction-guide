@@ -177,10 +177,23 @@ diagnostic counts by structured event type and payload field, not by substring.
 **Applies when** you want to reduce how often compaction fires.
 
 The tool-result pruner can be invoked independently — verified: a third-party
-plugin can obtain the service and call `pruneSession()` successfully.
+plugin can obtain the service and call `pruneSession()` successfully [O26].
 
-> **Not yet shipped.** A helper for this is planned; see
-> [`../PLAN.md`](../PLAN.md). The mechanism is verified, the packaging is not.
+**Shipped as a separate package, `dsh-compaction-prune` — but read its limits
+first.** It is a deliberately partial measure, and its own README says so. It is
+not published to a registry yet; build it from source until it is.
+
+```sh
+npm install dsh-compaction-prune
+```
+
+```yaml
+- insert:
+    - id: compaction-prune
+      name: 'dsh-compaction-prune'
+      config:
+        mode: warn      # observe first; it mutates durable session state
+```
 
 **What it does.** Trims oversized tool outputs *before* the context reaches the
 compaction threshold, so compaction is triggered less often.
@@ -188,6 +201,13 @@ compaction threshold, so compaction is triggered less often.
 **What it does not do.** It does **not** add backoff. If a compaction does fail,
 retries are still unthrottled [§4](#4-retry-storms). Treat it as reducing the
 *number of opportunities* to fail, not as making failure safe.
+
+**Not verified end-to-end.** Each step is tested in isolation, but no measurement
+demonstrates that enabling it on a long session actually reduces compaction
+attempts. If you try it, that before/after is the number worth reporting.
+
+> **This is not the fix for a dying session.** If your sessions stop making
+> progress entirely, §3 is the one that matters.
 
 ---
 

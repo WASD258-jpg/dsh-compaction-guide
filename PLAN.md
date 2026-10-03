@@ -63,6 +63,34 @@ as a subclass; the counter needs to live where both paths can see it.
 from reading any single extension point, and a plugin author could reasonably
 spend the effort before discovering it.
 
+### What *was* built instead — `dsh-compaction-prune`
+
+**Status: shipped as a separate repository.** The breaker is impossible, but the
+*narrower* goal — reduce how often compaction fires, so a failing compaction has
+fewer opportunities to fail — is reachable, and it was built.
+
+It hooks the session event plane rather than the compaction service, so it stays
+orthogonal to the mutually exclusive backend set in
+[`PRIOR-ART.md` §2.1](PRIOR-ART.md). It is a service class with a `static Config`,
+and it prunes tool results earlier than compaction would.
+
+**Its own README states, in its opening paragraph, that it is deliberately
+incomplete.** That is not modesty — it is the accurate description of a plugin
+that reduces trigger frequency and cannot add backoff. The distinction between
+"fewer chances to fail" and "safe failure" is the whole point, and conflating them
+would be the failure this repository exists to document.
+
+**Still not fixed by it:**
+
+| Gap | Why the plugin cannot close it |
+|---|---|
+| Backoff after a failed compaction | Requires suppressing an attempt, which no extension point can do [O24] |
+| Byte-bounded summarization | The request is assembled inside `summarizer.ts`; a plugin sees the stream, not the message array |
+| Rescuing an already-stuck session | Once the context exceeds the transport limit, pruning removes too little |
+
+The upstream request in this section stands unchanged. **A plugin is a partial
+measure; the guard belongs in the core.**
+
 ### ~~Gap 2~~ — byte-bounded summarization
 
 **Status: still vacant, but out of scope for this repository.** Upstream [S16]
