@@ -235,7 +235,7 @@ whole" error that produced the four corrections in `verify-config/`.
 | Keep cost down | §2's summarization route only | Lowering `thresholdRatio` — costs more calls |
 | Understand what happened | §1 diagnostic | Guessing from the UI |
 | Fix retry storms | Nothing works yet — report upstream | Any plugin — none can [O24] |
-| Fix it "properly" yourself | Report upstream; the guard belongs in the core | **Writing your own compaction backend** — the extension seam cannot reach either root cause |
+| Fix it "properly" yourself | Learn the seam: `summarize()` is injected, so a bounded summarizer is a small proposal | **Forking the engine** — you would own 566 lines of transaction code unrelated to the defect |
 
 **Do not combine two compaction backends.** Five plugins replace the same service
 and **fail to boot together**; see [`../PRIOR-ART.md` §2](../PRIOR-ART.md).

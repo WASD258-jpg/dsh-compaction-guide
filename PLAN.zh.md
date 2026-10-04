@@ -146,26 +146,35 @@ if (breakerTripped(session)) return next()
 
 ## 非目标
 
-- **另一个压缩后端** —— 两条独立理由，第二条是决定性的。
+- **另一个压缩后端** —— 两条理由，第二条是决定性的。
 
   其一，已有五个；它们互斥（[`PRIOR-ART.md` §2.1](PRIOR-ART.md)），
   而且最好的那个已经处理了分块 [P3]。
 
-  其二，**替换后端够不到本指南识别的任何一条根因。**
-  官方 `CompactionEngine` 抽象只暴露三个钩子 ——
-  `compactIfNeeded`、`compactRegion`、`compactNow`
-  （`compaction-basic/src/index.ts:269/358/383`）。它们决定*何时*压缩、*压哪一段*。
-  它们不决定：
+  其二，**维护一个分支意味着你要承担那些困难且与缺陷无关的部分。**
+  本页早期版本声称替换后端*无法*触及任何一条根因。**那是错的**，
+  而这个更正值得精确写出来，因为反向的错误同样容易犯：
 
-  | 根因 | 实际位于何处 | 后端能否触及 |
-  |---|---|---|
-  | 413 被误判为 `INVALID_REQUEST`（机制 A） | `llm-deepseek/src/transport.ts:32-33` —— **LLM 适配器层**，位于压缩层之下 | **否** |
-  | 摘要请求无界（机制 B） | `summarizer.ts:120` 的 `summarizeWithLlm` —— 独立函数；`compactRegion` 只转调 `compactSurfaceRegion` | **否** |
+  | 后端能控制什么 | 证据 |
+  |---|---|
+  | 它注册哪些监听器 | `CompactionEngine` 是 `abstract`、恰好三个成员；**其构造函数不注册任何监听器。** `agent/pre-step`、`agent/request-error`、`agent/status`、`session/event` 都由*子类* `BasicCompactionEngine` 注册（`index.ts:158/178/184/190`）。替换类本身就是那个子类，因此这些监听器归它所有 —— **退避与熔断是可实现的。** |
+  | `compactRegion` 做什么 | 已发布的 override 只转调 `compactSurfaceRegion`，但 override 可以做任何事 —— **摘要前先分块是可实现的。** |
+  | 摘要器是什么 | `summarize()` 经 `RegionDependencies`（`region.ts:26`）注入，不是硬连线的。**加一条字节界是一个函数的改动。** |
+  | 原始 HTTP 状态 | `transport.ts:39-40` 把 `{ status }` 挂到抛出的 `LlmError` 上，`agent-loop` 再带着整个 failure 重新抛出（`agent.ts:507`）。**413 可以靠 `status` 区分，而不只靠错误文本。** |
 
-  因此「官方预留了扩展接缝」**不**构成「可以靠自研后端修好」的理由。
-  接缝是真的，但它对这两条缺陷都在错误的层上。
-  **建议：不要把 `CompactionEngine` 的存在读作重写压缩的邀请。**
+  因此自研后端在**技术上能够**应对本指南识别的全部三条机制。不做的理由是不同的：
 
+  - **真正的成本是重写事务层，而不是那三处修复。** 区域选择、边界合法性
+    （`toolPairingBalanced*`）、整面稳定性断言、持久提交 —— 这些是 `region.ts`，
+    566 行，与两条缺陷都无关。唯一理智的路线是复用 `compactSurfaceRegion`；
+    而一旦这么做，你是在注入一个摘要器，不是在做一个后端。
+  - **缺陷在上游，所以分支会把它继承回来。** `retainTokens = 0` 与适配器的分类
+    在 `master`（`0.2.1-alpha.1`）上**依然存在**。分支必须在每次上游发布时重新打补丁。
+  - **两条修复都已经有归属。** 机制 A 今天已由 [P1] 解决；
+    机制 B 正是 [#7626](https://github.com/deepseek-ai/deepseek-harness/discussions/7626) 的主题。
+
+  **建议：注入，而不是分支。** 如果你想要「摘要请求有界」的行为，
+  那是一项值得向上游提议的**摘要器层**改动 —— 不是接手整个事务层的理由。
 - **另一个 413 分类器。** [P1] 覆盖全部三种触发形态
   （[S15][S16][S17]）且是失败即闭合的。依赖它。
 - **修改 DSH 安装目录下的文件。** 这里的一切都是插件或覆盖层；没有任何东西给厂商代码打补丁。

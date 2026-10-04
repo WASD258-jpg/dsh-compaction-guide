@@ -160,28 +160,42 @@ still present.** Contribute findings upstream rather than maintaining a fork.
 
 ## Non-goals
 
-- **Another compaction backend** — for two independent reasons, and the second is
-  the decisive one.
+- **Another compaction backend** — for two reasons, and the second is the decisive
+  one.
 
   First, five already exist; they are mutually exclusive
   ([`PRIOR-ART.md` §2.1](PRIOR-ART.md)) and the best one already handles chunking
   [P3].
 
-  Second, **a replacement backend cannot reach either root cause this guide
-  identifies.** The official `CompactionEngine` abstraction exposes three hooks —
-  `compactIfNeeded`, `compactRegion`, `compactNow`
-  (`compaction-basic/src/index.ts:269/358/383`). They decide *when* to compact and
-  *which region* to compact. They do not decide:
+  Second, **maintaining a fork means owning the parts that are hard and unrelated
+  to the defect.** An earlier version of this page claimed a replacement backend
+  *cannot* reach either root cause. **That was wrong, and the correction is worth
+  stating precisely** because the opposite mistake is easy to make too:
 
-  | Root cause | Where it actually lives | Reachable from a backend? |
-  |---|---|---|
-  | 413 misclassified as `INVALID_REQUEST` (Mechanism A) | `llm-deepseek/src/transport.ts:32-33` — the **LLM adapter**, below the compaction layer | **No** |
-  | Summarization request unbounded (Mechanism B) | `summarizer.ts:120` `summarizeWithLlm` — a standalone function; `compactRegion` merely delegates to `compactSurfaceRegion` | **No** |
+  | What a backend controls | Evidence |
+  |---|---|
+  | Which listeners it registers | `CompactionEngine` is `abstract` with exactly three members; **its constructor registers no listeners.** `agent/pre-step`, `agent/request-error`, `agent/status`, `session/event` are registered by the *subclass* `BasicCompactionEngine` (`index.ts:158/178/184/190`). A replacement class is that subclass, so it owns them — **backoff and a breaker are implementable.** |
+  | What `compactRegion` does | The shipped override delegates to `compactSurfaceRegion`, but an override may do anything — **chunking before summarization is implementable.** |
+  | What the summarizer is | `summarize()` is injected through `RegionDependencies` (`region.ts:26`), not hard-wired. **Adding a byte bound is a one-function change.** |
+  | The raw HTTP status | `transport.ts:39-40` attaches `{ status }` to the thrown `LlmError`, and `agent-loop` re-throws it carrying the whole failure (`agent.ts:507`). **A 413 is distinguishable by `status`, not only by message text.** |
 
-  So "the official code reserves an extensibility seam" is **not** a reason to
-  expect a fork to fix this. The seam is real, and it is in the wrong layer for
-  both defects. **Recommendation: do not read the presence of `CompactionEngine`
-  as an invitation to reimplement compaction.**
+  So a self-built backend is **technically capable** of addressing all three
+  mechanisms this guide identifies. The reason not to build one is different:
+
+  - **Re-implementing the transaction layer is the cost, not the fix.** Region
+    selection, boundary validity (`toolPairingBalanced*`), whole-surface stability
+    assertions, and durable commit are `region.ts` — 566 lines that have nothing to
+    do with either defect. Reusing `compactSurfaceRegion` is the only sane route,
+    and at that point you are injecting a summarizer, not building a backend.
+  - **The defect is upstream, so a fork inherits it back.** `retainTokens = 0` and
+    the adapter's classification are both still present on `master`
+    (`0.2.1-alpha.1`). A fork must re-apply its patches on every upstream release.
+  - **Both fixes already have homes.** Mechanism A is solved by [P1] today;
+    Mechanism B is the subject of [#7626].
+
+  **Recommendation: inject, don't fork.** If you want the bounded-summarizer
+  behaviour, that is a summarizer-level change worth proposing upstream — not a
+  reason to take on the transaction layer.
 
 - **Another 413 classifier.** [P1] covers all three trigger shapes
   ([S15][S16][S17]) and is fail-closed. Depend on it.
