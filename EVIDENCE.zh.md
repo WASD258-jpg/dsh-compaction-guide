@@ -173,7 +173,7 @@ provider returns 413 with an empty body
 
 ---
 
-## 4. 根因 B —— 摘要请求把自己撑爆
+## 4. 根因 B —— 摘要请求无界
 
 ### 4.1 三行相互作用的代码
 
@@ -205,20 +205,43 @@ const target = configured ?? latest ?? agentTarget
 `configured` 是（默认为空的）`summarizationProvider`/`summarizationModel` 组合；
 `latest` 是**该会话当前路由到的模型**。
 
-**结果是：把可能的最大输入，送给可用的最小窗口，且恰在窗口已经填满的那一刻。**
+**结果是：整个被压缩区被原样送出去，没有任何体积守卫，且用的就是会话当前所在的路由。**
+这个请求是否装得下，并不由摘要器决定 —— 它由会话在那一刻恰好所在的
+路由窗口决定。
 
-### 4.2 对照实验 —— 唯一的变量是窗口大小
+### 4.2 对照实验 —— 唯一的变量是会话所在的路由
 
-同一台机器、同一插件堆栈、同一时间窗口：
+本节早期版本把这个对照呈现为「窗口大小」，并把 `5f8b1111` 标注为在
+`stealth/ox-alpha` 上跑摘要。**那是对数据的误读，此处更正。**
 
-| 会话 | 摘要模型 | `contextWindow` | 压缩次数 | 成功 | 失败 |
-|---|---|---|---|---|---|
-| `c0acb35e` | `deepseek-official` / `deepseek-flash` | **1,000,000** | 7 | **7** | 0 |
-| `5f8b1111` | `openrouter` / `stealth/ox-alpha` | **262,144** | 22 | 1 | **21** |
+实测的 `compaction/summary` 载荷记录了摘要器自己的 `provider` 与 `model`。
+在 `5f8b1111` 中，该次摘要在 `deepseek-official/deepseek-v4-flash` 上运行
+—— 一条 **1,000,000** token 的路由 —— 并且**成功了**。整个会话中真正变化的是
+**会话所在的路由**，而失败与它精确同步：
 
-**来自失败会话中那唯一一次成功的物证：** 它的
-`shadowedTokenCount` 为 **557,896**，而 `inputTokens` 为 **791,091** —— 也就是
-**557K token 的历史被推进了一个 262K 的窗口。**
+| 当时生效的路由（声明的 `contextWindow`） | 压缩次数 | 成功 | 失败 |
+|---|---|---|---|
+| `deepseek-official/deepseek-v4-flash`（**1,000,000**） | 1 | **1** | 0 |
+| `openrouter/stealth/ox-alpha`（**262,144**） | 18 | 0 | **18** |
+| 切回 `deepseek-v4-flash`（**1,000,000**） | — | — | 无 |
+
+每一次失败都带着它失败时所用的模型名：
+
+```
+pi-ai detected context overflow for model "stealth/ox-alpha"
+```
+
+跨会话同样成立：`c0acb35e` 运行在 1,000,000 token 路由上，压缩 **7/7** 成功。
+
+**物证，正确地读。** 失败会话中那唯一一次成功携带 `shadowedTokenCount` =
+**557,896**、`inputTokens` = **791,091**。由于载荷同时记录了
+`provider: deepseek-official` 与 `model: deepseek-v4-flash`，那次请求送进的是
+一个 **1,000,000** token 的窗口 —— 因此它并未溢出，而把它描述成
+「557K token 被推进 262K 窗口」是错的。
+
+本节所记录的缺陷是真实的，但它是**缺少守卫**，不是窗口太小：
+同一个 791,091 token 的请求落在 262,144 token 的路由上就会失败，
+而摘要器里没有任何东西会阻止它。
 
 ### 4.3 为什么摘要失败无法自愈
 

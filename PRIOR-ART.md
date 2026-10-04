@@ -24,7 +24,7 @@ See [§6 Limitations](#6-limitations) for exactly what was and was not verified.
 
 Legend: ✅ complete · 🔶 partial · ❌ absent · ➖ not applicable
 
-| Repository | A<br>413 misclassified | B<br>summarizer overflows itself | C<br>no backoff / no breaker | Distribution |
+| Repository | A<br>413 misclassified | B<br>summarizer unbounded | C<br>no backoff / no breaker | Distribution |
 |---|---|---|---|---|
 | [`@argszero/cordis-plugin-length-stop-overflow`](https://github.com/argszero/cordis-plugin-length-stop-overflow) | ✅ **the only complete fix** | ❌ explicitly declines | ❌ | npm |
 | [`dsh-hypercompact`](https://github.com/mrbeandev/dsh-hypercompact) | ✅ incidental | ✅ **structurally eliminated** (zero LLM) | 🔶 retry counter | npm |

@@ -185,7 +185,7 @@ originating event's `source.kind` is `"user"`.
 
 ---
 
-## 4. Root cause B — the summarization request overflows itself
+## 4. Root cause B — the summarization request is unbounded
 
 ### 4.1 Three interacting lines
 
@@ -218,21 +218,46 @@ const target = configured ?? latest ?? agentTarget
 `configured` is the (empty by default) `summarizationProvider`/`summarizationModel`
 pair; `latest` is **the conversation's currently routed model**.
 
-**The result: the largest possible input is sent to the smallest available
-window, at the moment the window is already full.**
+**The result: the entire region is sent with no size guard, on whatever route the
+conversation currently uses.** Whether that request fits is not decided by the
+summarizer — it is decided by the window of the route the conversation happens to
+be on at that moment.
 
-### 4.2 Controlled comparison — the only variable is window size
+### 4.2 Controlled comparison — the only variable is the conversation's route
 
-Same machine, same plugin stack, same time window:
+An earlier version of this section presented the comparison as "window size",
+with `5f8b1111` labelled as running its summarizer on `stealth/ox-alpha`. **That
+was a misreading of the data, and it is corrected here.**
 
-| Session | Summarization model | `contextWindow` | Compactions | Succeeded | Failed |
-|---|---|---|---|---|---|
-| `c0acb35e` | `deepseek-official` / `deepseek-flash` | **1,000,000** | 7 | **7** | 0 |
-| `5f8b1111` | `openrouter` / `stealth/ox-alpha` | **262,144** | 22 | 1 | **21** |
+The measured `compaction/summary` payload records the summariser's own `provider`
+and `model`. In `5f8b1111` the summary ran on `deepseek-official/deepseek-v4-flash`
+— a **1,000,000**-token route — and **succeeded**. What changed over the session
+was the **conversation's route**, and the failures track that exactly:
 
-**Physical evidence from the one success in the failing session:** its
-`shadowedTokenCount` was **557,896** with `inputTokens` of **791,091** — i.e.
-**557K tokens of history were pushed into a 262K window.**
+| Route in force (declared `contextWindow`) | Compactions | Succeeded | Failed |
+|---|---|---|---|
+| `deepseek-official/deepseek-v4-flash` (**1,000,000**) | 1 | **1** | 0 |
+| `openrouter/stealth/ox-alpha` (**262,144**) | 18 | 0 | **18** |
+| back to `deepseek-v4-flash` (**1,000,000**) | — | — | none |
+
+Every failure carries the name of the model it failed on:
+
+```
+pi-ai detected context overflow for model "stealth/ox-alpha"
+```
+
+Cross-session the same pattern holds: `c0acb35e` ran on a 1,000,000-token route
+and compacted **7/7**.
+
+**Physical evidence, read correctly.** The one success in the failing session had
+`shadowedTokenCount` = **557,896** and `inputTokens` = **791,091**. Because the
+payload also records `provider: deepseek-official` and `model: deepseek-v4-flash`,
+that request went to a **1,000,000**-token window — so it did not overflow, and
+describing it as "557K tokens pushed into a 262K window" was wrong.
+
+The defect this section documents is real, but it is **the absence of a guard**,
+not an undersized window: the same 791,091-token request on a 262,144-token route
+would fail, and nothing in the summarizer would prevent it.
 
 ### 4.3 Why the summarization failure cannot self-heal
 

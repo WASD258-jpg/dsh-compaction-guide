@@ -23,7 +23,7 @@
 
 图例：✅ 完整 · 🔶 部分 · ❌ 缺失 · ➖ 不适用
 
-| 仓库 | A<br>413 误判 | B<br>摘要器撑爆自己 | C<br>无退避 / 无熔断器 | 分发渠道 |
+| 仓库 | A<br>413 误判 | B<br>摘要器无界 | C<br>无退避 / 无熔断器 | 分发渠道 |
 |---|---|---|---|---|
 | [`@argszero/cordis-plugin-length-stop-overflow`](https://github.com/argszero/cordis-plugin-length-stop-overflow) | ✅ **唯一完整的修复** | ❌ 明确拒绝 | ❌ | npm |
 | [`dsh-hypercompact`](https://github.com/mrbeandev/dsh-hypercompact) | ✅ 附带 | ✅ **结构性消除**（零 LLM） | 🔶 重试计数 | npm |

@@ -75,8 +75,8 @@
 | **O5** | **失败分类，按渲染后的错误文本**（去重 / 合并）：`pi-ai detected context overflow for model "…"` **40 / 60**；`DeepSeek request aborted by caller` 2 / 3。溢出约占全部失败的 95%。 | 默认 / `--merge` |
 | **O6** | **HTTP 状态 → 赋予的码**（去重 / 合并）：`413 → INVALID_REQUEST` **239 / 478**；`400 → CONTEXT_WINDOW_EXCEEDED` 9 / 14。**413 中 100% 被判为 `INVALID_REQUEST`，零例外。** | 默认 / `--merge` |
 | **O7** | **每个 413 抽样都携带同一条兜底串。** 全部 30 个抽样失败读作 `DeepSeek Messages request failed (413)`；**没有一个**携带提供方撰写的 `error.message`。 | 抽样转储 |
-| **O8** | **对照实验 —— 窗口大小是唯一变量。** 同机器、同插件栈、同时期：摘要器在 **1,000,000** token 路由上 → 7 次压缩，**7 次成功**；摘要器在 **262,144** token 路由上 → 22 次启动，**1 次成功、21 次失败**。 | 会话表 |
-| **O9** | **溢出的物理记录。** 失败会话中唯一一次成功压缩携带 `shadowedTokenCount = 557,896` 与 `inputTokens = 791,091` —— 557K token 的历史被送进 262K 窗口。 | `compaction/summary` 载荷 |
+| **O8** | **对照实验 —— 会话所在路由是唯一变量。** 同一会话 `session-5f8b1111`，只有被路由的模型变化，压缩成败与之完全同步。在 `deepseek-official/deepseek-v4-flash`（声明窗口 **1,000,000**）上：1 次压缩，**1 次成功**。路由切到 `openrouter/stealth/ox-alpha`（声明窗口 **262,144**）后：**18 次连续失败**，每一次都点名 `stealth/ox-alpha`。路由切回后：不再失败。跨会话：`session-c0acb35e` 在 1,000,000 token 路由上 → 7 次压缩，**7 次成功**。 | `request/context` 声明与 `compaction/end` 交错的时间线 |
+| **O9** | **摘要请求无界；它之所以成功，只是因为当时的路由恰好窗口很大。** `session-5f8b1111` 中唯一一次成功的压缩携带 `shadowedTokenCount = 557,896` 与 `inputTokens = 791,091`，运行在 `deepseek-official/deepseek-v4-flash` —— 一条 **1,000,000** token 的路由上。它**并未**溢出 262,144 窗口；根本不存在体积守卫，因此同一个请求落在更小的路由上就会直接失败。 | `compaction/summary` 载荷（记录 `provider`、`model`、`usage.inputTokens`） |
 | **O10** | **对照实验 —— HTTP 状态是唯一变量，在同一会话内。** 在 `session-c0acb35e` 中，状态 **400** 溢出触发压缩 **3 次**，分别在 **+9 ms / +25 ms / +32 ms** 内，且**全部成功**；状态 **413** 溢出触发压缩 **零次**。同一会话、同一模型、同一声明窗口。 | `assistant/attempt` 流式失败 |
 | **O11** | **无退避。** 最差会话中：**单个回合内 18 次连续失败**；重试间隔最小 **76,631 ms**、中位 **101,173 ms**、最大 **778,069 ms**；失败总跨度 **5,391 秒（89.9 分钟）**。间隔**不随**失败次数增长。 | 间隔直方图 |
 | **O12** | **交接不是由压缩失败导致的。** 被交接的会话在交接当下 `failedEnds = 0` 且压缩次数为零。链条是：请求失败 → 压缩从未触发 → 会话卡死 → **用户**运行 `/rescue` → 交接。`session/title` 与 `handoffs.jsonl.at` 共享同一个毫秒时间戳 `1789659712327`，且触发事件的 `source.kind` 为 `"user"`。 | 交接记录 |

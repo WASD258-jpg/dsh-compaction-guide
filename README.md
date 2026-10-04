@@ -47,8 +47,10 @@ comparison:
    misclassified [O6].
 2. **The summarization request is unbounded.** It replays the compacted region
    verbatim [S6], while the overflow path maximises that region by passing a zero
-   retention budget [S5][S9]. Holding everything but window size fixed:
-   **7/7 successes at 1,000,000 tokens versus 1/22 at 262,144** [O8].
+   retention budget [S5][S9]. Whether the request fits is then decided entirely by
+   the window of whichever route the conversation is on. Holding everything but the
+   route fixed, within one session: **the 1,000,000-token route compacted 1/1, the
+   262,144-token route failed 18/18** [O8].
 3. **No backoff, no breaker, no user-visible signal.** Eighteen consecutive
    failures were recorded in one turn with **no growth in inter-attempt interval**
    [O11][S11].
@@ -176,7 +178,7 @@ being `"user"` [O12].
 
 ---
 
-## 3. Mechanism B — the summarization request overflows itself
+## 3. Mechanism B — the summarization request is unbounded
 
 ### 3.1 Three interacting lines
 
@@ -194,22 +196,39 @@ expands to nearly the entire surface.
 **currently routed model**. With the configuration pair unset — its default — the
 summarizer inherits whatever window the conversation happens to be using.
 
-The conjunction: **the largest possible input is sent to the smallest available
-window, at the moment that window is already full.**
+The conjunction: **the entire compacted region is sent verbatim, with no size
+guard, on whatever route the conversation currently uses** — so the request
+succeeds or fails purely according to that route's window, and a route change
+mid-session changes the answer.
 
 ### 3.2 Evidence
 
-**Controlled comparison, window size as the sole variable** [O8]. Same machine,
-same plugin stack, same period:
+**Controlled comparison, the conversation's route as the sole variable** [O8].
+Within one session, `session-5f8b1111`, only the routed model changes — and the
+compaction outcomes track it exactly:
 
-| Summarization route window | Compactions | Succeeded | Failed |
+| Route (declared window) | Compactions | Succeeded | Failed |
 |---|---|---|---|
-| 1,000,000 | 7 | **7** | 0 |
-| 262,144 | 22 | 1 | **21** |
+| `deepseek-official/deepseek-v4-flash` (1,000,000) | 1 | **1** | 0 |
+| `openrouter/stealth/ox-alpha` (262,144) | 18 | 0 | **18** |
+| back to `deepseek-v4-flash` (1,000,000) | — | — | none |
 
-**Physical record.** The single successful compaction in the failing session
-carried `shadowedTokenCount = 557,896` with `inputTokens = 791,091` [O9] — **557K
-tokens of history sent to a 262K window.**
+Every one of the 18 failures names the model it failed on:
+`pi-ai detected context overflow for model "stealth/ox-alpha"`.
+
+Cross-session, the same pattern: `session-c0acb35e` ran on a 1,000,000-token
+route and compacted **7/7**.
+
+**What the physical record shows — and what an earlier version of this guide got
+wrong.** The single successful compaction in the failing session carried
+`shadowedTokenCount = 557,896` and `inputTokens = 791,091` [O9]. It ran on
+`deepseek-v4-flash`, a **1,000,000**-token route, and it **succeeded**.
+
+This guide previously described that same event as "557K tokens of history sent
+to a 262K window" — which is self-contradictory, since the compaction succeeded.
+The measured payload records the summariser's own `provider` and `model`, and
+they were not the small-window route. **The request was not too large for its
+window; it was simply unguarded, and it happened to land on a large one.**
 
 ### 3.3 Why the failure cannot self-heal
 
