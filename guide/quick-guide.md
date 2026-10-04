@@ -234,7 +234,7 @@ whole" error that produced the four corrections in `verify-config/`.
 | Stop sessions dying at all | §3 (classification) + §2 (summarization route) | §7 — measured, it does not work |
 | Keep cost down | §2's summarization route only | Lowering `thresholdRatio` — costs more calls |
 | Understand what happened | §1 diagnostic | Guessing from the UI |
-| Fix retry storms | Nothing works yet — report upstream | Any plugin — none can [O24] |
+| Fix retry storms | Report upstream; a backend you control can add it | Any *external* plugin — none can [O24] |
 | Fix it "properly" yourself | Learn the seam: `summarize()` is injected, so a bounded summarizer is a small proposal | **Forking the engine** — you would own 566 lines of transaction code unrelated to the defect |
 
 **Do not combine two compaction backends.** Five plugins replace the same service
@@ -251,7 +251,7 @@ adding your numbers helps:
 |---|---|
 | 413 classified `INVALID_REQUEST`, no recovery | [#7626](https://github.com/deepseek-ai/deepseek-harness/discussions/7626) [S16] |
 | Length stop with a negligible output count | [#7214](https://github.com/deepseek-ai/deepseek-harness/discussions/7214) [S15] |
-| Retry storm with no backoff | Not yet filed — the guard belongs in `compaction-basic`'s pre-step listener [O24] |
+| Retry storm with no backoff | Not yet filed — the guard belongs in the pre-step listener that makes the attempt [O24]. A backend you own *is* that listener. |
 
 Include your diagnostic output (`--json`) and the upstream revision you are
 running. The counts in this guide are from one corpus [O1] and are explicitly

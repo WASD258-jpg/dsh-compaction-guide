@@ -64,9 +64,13 @@ comparison:
 
 A prior-art review of 20 repositories finds mechanism 1 **already solved** by a
 maintained plugin [P1] — verified working on this host [O15] — and mechanism 2
-**structurally eliminated** by two others [P2][P5]. Mechanism 3 has **no
-implementation, and cannot have one**: feasibility testing shows no extension
-point can suppress a compaction attempt [O24].
+**structurally eliminated** by several others [P2][P3][P5], including one backend
+that chunks and merges with a real tokenizer [P3]. Mechanism 3 has **no
+implementation among the plugins surveyed**, and none *can* add one from outside:
+feasibility testing shows no extension point can suppress a `compaction-basic`
+attempt [O24]. **A replacement backend is a different matter** — it owns the
+listener that makes the attempt, so a breaker is implementable there
+([`PLAN.md`](PLAN.md) Non-goals).
 
 **This guide therefore documents, verifies, and points at existing fixes rather
 than shipping a competing one.**
@@ -280,7 +284,7 @@ the pressure loop's own retry counter is local to one call [S14].
 A backoff would produce increasing intervals. The observed distribution is flat:
 **the interval does not grow with failure count** [O11].
 
-### 4.1 This one cannot be fixed by a plugin
+### 4.1 No plugin can fix this from outside — a replacement backend can
 
 Breaker behaviour requires **skipping an attempt before it happens**. Every
 extension point was enumerated; none can [O24]:
