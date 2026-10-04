@@ -42,7 +42,7 @@ count overlapping snapshots instead of de-duplicating them [O3].
 ## 2. Sessions that compact and fail
 
 **Symptom.** Compaction runs, fails, runs again. The session eventually stops
-making progress. In the corpus analysed here, success rate was **17.6%** [O4],
+making progress. In the corpus analysed here, success rate was **30.0%** [O4],
 and **~95% of failures carried one identical error text** [O5].
 
 **Cause.** The summarization request replays the compacted region verbatim with no

@@ -115,7 +115,7 @@ Plus backend **one of**: [P2] *(its README marks 0.2.0-rc.2 as tested)* or [P3]
 | Risk | Severity | Detail |
 |---|---|---|
 | A 413 with unrelated wording is also reclassified | medium | Any `status === 413` is rewritten before wording is consulted [O16], so an image-size rejection would be treated as an overflow. Impact is bounded — a wasted compaction, with the original error preserved [PRIOR-ART §5.2]. |
-| The replacement backend is unverified here | unknown | [P2] and [P3] were **not** executed in this study. Their own documentation is the only evidence for their behaviour. |
+| The replacement backend is unverified here | unknown | [P3] **was** executed during this study — cloned, its own suite run (119 unit + 30 e2e + 7 smoke, all passing), mounted against a real 0.2.0-rc.2 installation, and its chunker driven directly and measured with its own tokenizer. [P2] and the remaining backends were **not** executed; their documentation is the only evidence for their behaviour. |
 | The backend choice is irreversible in practice | low | Backends are mutually exclusive [§2.1], so switching later means re-validating from scratch. |
 | Observation ≠ correction | low | Start with `mode: 'warn'` [P1] to confirm the reclassification rate on your own traffic before letting it change behaviour. |
 

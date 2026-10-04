@@ -16,7 +16,7 @@
 | Item | Value |
 |---|---|
 | Location | `$DSH_HOME/sessions/<encoded-cwd>/<session-id>/session.v4.jsonl.zstd` |
-| Files scanned | **158** across **137** session directories [O1] |
+| Files scanned | **198** across **177** session directories [O1] (re-measured 2026-10-05; the corpus grows as it is used) |
 | Format | zstd **multi-frame** concatenation, magic `28 B5 2F FD` |
 | Decoder | Node.js v22.22.3 native `node:zlib.zstdDecompressSync` |
 
@@ -46,22 +46,44 @@ Repository: <https://github.com/deepseek-ai/deepseek-harness>
 > not disjoint segments. Counting every file inflates every total. Both counts
 > are reported; the de-duplicated one is the honest rate.
 
-| Event type | Per-session (de-duplicated) | All snapshots (union) |
+| Event type | Per-session, inheritance excluded | All snapshots (union) |
 |---|---|---|
-| `compaction/start` | **51** | 84 |
-| `compaction/end` | **51** | 84 |
+| `compaction/start` | **30** | 84 |
+| `compaction/end` | **30** | 84 |
 | **`compaction/summary`** (succeeded) | **9** | **21** |
 | `compaction/prune` | — | 129 |
-| **Failed closures** (`compaction/end` carrying `error`) | **42** | **63** |
+| **Failed closures** (`compaction/end` carrying `error`) | **21** | **63** |
 
-**Success rate 9/51 = 17.6%** de-duplicated, or 21/84 = 25.0% across all
-snapshots. In both cases the arithmetic closes exactly — every `start` either
-produced a `summary` or closed with an error.
+**Success rate 9/30 = 30.0%** de-duplicated, or 21/84 = 25.0% across all
+snapshots.
 
-The inflation is visible directly: the union run lists `session-5f8b1111` once per
-stored snapshot, each with an identical `starts = 22`. The de-duplicated run
-lists it once. Per-session totals for the three sessions that ever compacted sum
-to `22 + 22 + 7 = 51`, matching the de-duplicated `start` count exactly.
+> **This table said 51 / 42 / 17.6% until 2026-10-05. Those figures were wrong, and
+> the reason they survived three correction rounds is worth stating.**
+>
+> A fork (`session-085190f3`) declares `parentSession = session-5f8b1111` and
+> `seedLength = 826443`. Inside that seed it replays the parent's history
+> **byte-identically** — verified by matching `type + seq + time + payload hash`
+> across all 70 of its compaction events, and by the two sessions' `compaction/start`
+> seq sets being **equal as sets**. It performed **none** of them itself.
+>
+> De-duplication was per *directory*, and the fork lives in a different directory
+> from its parent, so it could not see this. 22 starts, 1 summary and 21 failures
+> were counted twice.
+>
+> **The old table's arithmetic closed exactly** — `22 + 22 + 7 = 51` and
+> `51 − 9 = 42` — and that closure was presented here as evidence that the counting
+> was sound. It was the opposite: the duplicate `22` is *what made* the arithmetic
+> close. **A self-verifying loop: duplicate counting produced exact closure, and
+> exact closure was read as proof of correctness.** The one check that would have
+> caught it — comparing the fork's events against its parent's — was in no probe's
+> coverage, while every check that was covered passed.
+
+The union figure still shows snapshot inflation directly: the union run lists
+`session-5f8b1111` once per stored snapshot. Note that the `starts = 22` seen in the
+`session.jsonl.zstd` under that name belongs to the **fork's** directory, not the
+parent's — an earlier version of this section attributed it to the parent.
+`tools/doctor.mjs` now reports inherited events separately rather than silently
+dropping them.
 
 > **Picking the snapshot is a real trade-off, not a detail.** The snapshots are
 > not nested: a later snapshot may compact events away, so its total event count
@@ -70,6 +92,10 @@ to `22 + 22 + 7 = 51`, matching the de-duplicated `start` count exactly.
 > compactions instead of 7, and 413 failures disappeared entirely.
 > `tools/doctor.mjs` scores by **recency first, volume second**; `--merge` gives
 > union semantics instead.
+>
+> **Snapshot selection and fork inheritance are two different de-duplication
+> problems**, and solving the first says nothing about the second. The per-directory
+> rule above is correct for snapshots and blind to forks.
 
 ### 2.1 Error text distribution
 
@@ -80,8 +106,8 @@ counts must be taken by rendered text.
 
 | Count (de-dup / union) | Error text |
 |---|---|
-| **40 / 60** | `pi-ai detected context overflow for model "<model>"` |
-| 2 / 3 | `DeepSeek request aborted by caller` |
+| **20 / 40** | `pi-ai detected context overflow for model "<model>"` |
+| 1 / 2 | `DeepSeek request aborted by caller` |
 
 **Overflow accounts for 95% of all compaction failures.** This is a structural
 defect, not intermittent flakiness.
@@ -167,18 +193,33 @@ The cleanest available evidence. Within a single session, both statuses occurred
 
 | Status | Classified as | Triggered compaction? | Outcome |
 |---|---|---|---|
-| **400** | `CONTEXT_WINDOW_EXCEEDED` | **2 times**, at **+25 ms** and **+32 ms** | **both succeeded** |
+| **400** | `CONTEXT_WINDOW_EXCEEDED` | **3 times**, at **+9 ms**, **+25 ms** and **+32 ms** | **all succeeded** |
 | **413** | `INVALID_REQUEST` | **never** | failed |
 
 **Same session, same model, same declared window. The only variable is the HTTP
 status code.** This rules out "the compaction logic itself is broken" — the logic
 works whenever it is reached.
 
-> **Corrected count.** An earlier version of this table said three times
-> (`+9 / +25 / +32 ms`). The `+9 ms` pairing exists, but in a *different snapshot*
-> of the same session rather than in the file under analysis — the
-> snapshot-duplication error [O3] warns about. Within one file there are two
-> occurrences. The conclusion is unchanged: 400 triggers compaction, 413 does not.
+> **On the count.** This table said three, was corrected to two, and is now three
+> again. The intermediate correction was **wrong**, and how it went wrong is worth
+> recording because it is the same trap in a new place.
+>
+> The correction argued the `+9 ms` pairing lived in "a *different snapshot*".
+> That was inferred from reading `session-c0acb35e/session.jsonl.zstd`, which is a
+> **truncated residue** in that directory — the very hazard [O3] documents. Measured
+> per snapshot:
+>
+> | Snapshot | `compaction/start` | 400 → start pairings |
+> |---|---|---|
+> | `session.jsonl.zstd` | 5 | 2 (+25, +32) |
+> | `session.v3.jsonl.zstd` | 6 | **3 (+9, +25, +32)** |
+> | `session.v4.jsonl.zstd` | 7 | **3 (+9, +25, +32)** |
+>
+> So three is correct, and the `+9 ms` pairing is in the *same session's own
+> later snapshots*, not in some unrelated file. The original figure was deleted on
+> the strength of an unrepresentative file — **an over-correction that presented
+> itself as a successful self-audit.** The conclusion never changed: 400 triggers
+> compaction, 413 does not.
 
 ### 3.4 Causal direction of "已交接"
 
@@ -302,14 +343,23 @@ From the worst session (22 starts):
 
 | Metric | Value |
 |---|---|
-| Consecutive failures in one turn | **18** |
+| Consecutive failures in one turn | **18** (turn 90) |
 | Minimum interval | 76,631 ms |
 | Median interval | 101,173 ms |
 | Maximum interval | 778,069 ms |
-| Total failure span | 5,391 s (**89.9 minutes**) |
+| Span of that burst | **4,022 s** start-to-start (**3,966 s** end-to-end) |
 
 **The interval does not grow with the failure count.** A backoff would show
 increasing gaps; this shows a flat distribution — retries are unconditional.
+
+> **A figure was removed here on 2026-10-05.** This table also listed a "total
+> failure span" of 5,391 s (89.9 min). That value does not reproduce under any
+> window we can construct: the burst spans 4,022 s, and the whole file spans
+> 615,258 s. Because the table's own heading says "from the worst session" while the
+> 18-failure row is scoped to a single turn, a reader would reasonably read 5,391 s
+> as *that burst*, which it is not. Rather than keep a number whose origin is
+> unknown, it is gone; the three intervals above — the actual evidence for "no
+> backoff" — are exact.
 
 ---
 
@@ -394,7 +444,7 @@ console.log(STRUCTURED.test(fallback), TOO_LARGE.test(fallback), EXCEEDS.test(fa
 Stated explicitly, because the recommendations in [PLAN.md](PLAN.md) rest on them.
 
 **8.1 Single-corpus scope.** All counts derive from one user's session logs [O1].
-The *frequencies* — 17.6% success, 239/239 misclassified, 18 consecutive failures
+The *frequencies* — 30.0% success, 239/239 misclassified, 18 consecutive failures
 — describe that corpus and **do not generalise** to other installations. The
 *mechanisms* are established against pinned upstream source [S1]–[S14] and are
 not corpus-specific. Where a claim depends on frequency, it is stated as an

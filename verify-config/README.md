@@ -126,7 +126,7 @@ than *a config typo*. This is the highest-severity risk in the recommendation se
 |---|---|
 | Lowering `thresholdRatio` 0.8 → 0.5 | Trigger moves 678,464 → 500,000 tokens, i.e. **26% earlier**; every compaction is a full model call, so **more calls at real token cost** |
 | Raising `maxOverflowRetries` 1 → 3 | **Inert** while Mechanism A is unfixed — the `agent/request-error` path is never reached [S4][O6] |
-| Halving `maxTokens` to 32,768 | Introduces a truncation failure mode; observed summary sizes in the analysed corpus are max **4,963** tokens, median **4,312** [O23] — comfortable, but that is one corpus, not a bound |
+| Halving `maxTokens` to 32,768 | Introduces a truncation failure mode; observed summary sizes in the analysed corpus are max **6,585** output tokens, median **4,596** [O23] — comfortable, but that is one corpus, not a bound |
 | The benefit itself | **Inferred.** [O8] is an observational comparison, not a trial of these settings on a failing session |
 
 ## Reproduce

@@ -214,7 +214,7 @@ compaction with `summarization truncated at the token cap (incomplete
 checkpoint)`, which is recorded as a compaction error [S6-derived].
 
 The recommendation halves the default (65,536 → 32,768). **Measured summary sizes
-in the analysed corpus: maximum 4,963 tokens, median 4,312** [O23] — comfortably
+in the analysed corpus: maximum 6,585 output tokens, median 4,596** [O23] — comfortably
 below the cap. **This is a single-corpus observation, not a guarantee**: a corpus
 with much longer sessions could produce longer summaries.
 

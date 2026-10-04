@@ -112,11 +112,11 @@ ungreppable, which defeats the purpose of quoting it.
 命令行参数、日志行与错误信息一律不翻译。翻译错误信息会让它无法被检索，
 这恰恰违背了引用它的目的。
 
-**3. Numbers are identical across languages.** `51`, `17.6%`, `239/239`,
+**3. Numbers are identical across languages.** `30`, `30.0%`, `239/239`,
 `678,464` — unchanged. If a number differs between the two versions, one of
 them is wrong, and that is a defect to fix rather than a translation choice.
 
-**数字在两种语言中完全一致。** `51`、`17.6%`、`239/239`、`678,464` —— 不变。
+**数字在两种语言中完全一致。** `30`、`30.0%`、`239/239`、`678,464` —— 不变。
 若两个版本的某个数字不同，则其中一个是错的，那是需要修复的缺陷，
 而不是翻译选择。
 

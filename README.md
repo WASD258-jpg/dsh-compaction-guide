@@ -40,8 +40,8 @@ has already been fixed, and what remains unfixable.**
 ## Abstract
 
 Automatic compaction in DeepSeek Harness 0.2.0-rc.2 succeeds in a minority of
-attempts on a long-running session corpus: **9 successes out of 51 starts
-(17.6%)** [O4]. Failures are not spread across causes — **~95% carry a single
+attempts on a long-running session corpus: **9 successes out of 30 starts
+(30.0%)** [O4]. Failures are not spread across causes — **~95% carry a single
 error text**, `pi-ai detected context overflow for model "…"` [O5].
 
 Three independent mechanisms are identified, each isolated by a controlled
@@ -79,7 +79,7 @@ than shipping a competing one.**
 
 ## 1. Measurement basis
 
-All counts derive from **158 session-log files across 137 session directories**
+All counts derive from **198 session-log files across 177 session directories**
 [O1], decoded frame-by-frame with Node's native zstd support.
 
 Three methodological hazards are reported because each materially changes the
@@ -101,7 +101,7 @@ segments [O3]. Every figure is given in both forms:
 | `compaction/start` | **51** | 84 |
 | `compaction/summary` (succeeded) | **9** | 21 |
 | Failed closures | **42** | 63 |
-| Success rate | **17.6%** | 25.0% |
+| Success rate | **30.0%** | 25.0% |
 | `413 → INVALID_REQUEST` | **239** | 478 |
 
 The de-duplicated column is the rate a user experiences; the union column counts
@@ -166,7 +166,7 @@ window, the only variable is the HTTP status [O10]:
 
 | Status | Assigned code | Triggered compaction | Outcome |
 |---|---|---|---|
-| **400** | `CONTEXT_WINDOW_EXCEEDED` | **2 times**, at +25 ms and +32 ms | **both succeeded** |
+| **400** | `CONTEXT_WINDOW_EXCEEDED` | **3 times**, at +9 / +25 / +32 ms | **all succeeded** |
 | **413** | `INVALID_REQUEST` | **never** | failed |
 
 This rules out "the compaction logic is broken": the logic succeeds whenever it is
@@ -279,7 +279,7 @@ the pressure loop's own retry counter is local to one call [S14].
 | Minimum interval | 76,631 ms |
 | Median interval | 101,173 ms |
 | Maximum interval | 778,069 ms |
-| Total failure span | 5,391 s (89.9 min) |
+| Span of that burst | **4,022 s** start-to-start |
 
 A backoff would produce increasing intervals. The observed distribution is flat:
 **the interval does not grow with failure count** [O11].
@@ -407,7 +407,7 @@ What remains broken, and one closure: Gap 4 (circuit breaker) is recorded as an
 ## 8. Threats to validity
 
 **Single-corpus scope.** All counts derive from one user's session logs [O1]. The
-*frequencies* — 17.6%, 239/239, 18 consecutive — describe that corpus and **do not
+*frequencies* — 30.0%, 239/239, 18 consecutive — describe that corpus and **do not
 generalise**. The *mechanisms* are established against pinned upstream source
 [S1]–[S14] and are not corpus-specific.
 
@@ -483,13 +483,21 @@ reading the cited lines. Line numbers are resolved by
 transcribed — **re-run it after any revision change**; a resolution failure means
 the citation no longer matches the revision, not that the checker is broken.
 
-> **Status of reproducibility.** All 20 scripts in this repository were run
-> end-to-end against the pinned dependencies before this guide was published, and
-> the corpus figures (51 / 9 / 42 / 239) were confirmed to reproduce. A reader
-> following [`REPRODUCING.md`](REPRODUCING.md) should see the same output. **If
-> something does not reproduce, that is a defect worth reporting** — three
-> verification attempts in this study were wrong the first time, and the
-> corrected versions are the ones shipped.
+> **Status of reproducibility.** The scripts in this repository were run end-to-end
+> against the pinned dependencies, and on **2026-10-05** the corpus figures were
+> measured as **30 / 9 / 21 / 239** (starts / summaries / failures / misclassified
+> 413s) over **198 files in 177 session directories**.
+>
+> **These are pinned to a moment, not timeless.** The corpus is a live directory the
+> tool measures; it grows every time a session is used, and re-measuring may return
+> different numbers — including while you read this. Re-run
+> [`tools/doctor.mjs`](tools/doctor.mjs) and compare against the date above rather
+> than against the figure alone.
+>
+> A reader following [`REPRODUCING.md`](REPRODUCING.md) should see the same output
+> **on the same corpus**. **If something does not reproduce, that is a defect worth
+> reporting** — several verification attempts in this study were wrong the first
+> time, and the corrected versions are the ones shipped.
 
 ---
 

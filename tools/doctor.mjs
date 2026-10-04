@@ -152,6 +152,22 @@ function analyseSession(file) {
   const { text, frames, failedFrames } = decodeLog(file)
   const events = parseEvents(text)
 
+  // A forked session declares `parentSession` and carries `seedLength` at the TOP
+  // LEVEL of its `session` header event (not under `data`). Events with
+  // seq < seedLength are a byte-identical replay of the parent's history, not work
+  // this session performed. Upstream treats `seq >= inheritedEventCount` as "this
+  // session's own work" (core/session/src/index.ts).
+  //
+  // Counting them inflates the corpus: the parent's compactions get counted once
+  // for the parent and again for each fork. Directory-based de-duplication cannot
+  // see this, because the two live in different directories.
+  const header = events.find(e => e.type === 'session')
+  const parentSession = typeof header?.parentSession === 'string' ? header.parentSession : null
+  const seedLength = Number.isInteger(header?.seedLength) ? header.seedLength : null
+  const inheritedCut = parentSession !== null && seedLength !== null ? seedLength : 0
+  const isFork = parentSession !== null
+  const own = (e) => e.seq >= inheritedCut
+
   const counts = {}
   for (const e of events) counts[e.type] = (counts[e.type] ?? 0) + 1
 
@@ -160,20 +176,31 @@ function analyseSession(file) {
   const summaries = events.filter(e => e.type === 'compaction/summary')
   const failed = ends.filter(e => e.data?.error !== undefined)
 
+  // The same events, restricted to this session's own work.
+  const ownStarts = starts.filter(own)
+  const ownSummaries = summaries.filter(own)
+  const ownFailed = failed.filter(own)
+  const inheritedStarts = starts.length - ownStarts.length
+
   // Failure taxonomy. Note: `compaction/end` persists `error` as a FLATTENED
   // string via errorChain(); `code`/`name`/`cause` are NOT stored, so
   // classification must read rendered text.
   const failureKinds = {}
-  for (const e of failed) {
+  for (const e of ownFailed) {
     const kind = classifyFailure(e.data.error)
     failureKinds[kind] = (failureKinds[kind] ?? 0) + 1
   }
 
   // HTTP status + assigned code, from assistant/attempt stream failures.
+  //
+  // These are counted from THIS file only, so a session stored in several snapshots
+  // would be counted once per snapshot under `--merge`. Per-session figures are
+  // therefore only comparable across the default (one file per session) run.
   const statuses = {}
   const codes = {}
   for (const e of events) {
     if (e.type !== 'assistant/attempt') continue
+    if (!own(e)) continue
     const stream = e.data?.stream
     if (!Array.isArray(stream)) continue
     for (const entry of stream) {
@@ -188,35 +215,68 @@ function analyseSession(file) {
   }
 
   // Retry cadence: consecutive start timestamps within one turn.
-  const times = starts.map(e => e.time).filter(t => typeof t === 'number')
+  const times = ownStarts.map(e => e.time).filter(t => typeof t === 'number')
   const gaps = []
   for (let i = 1; i < times.length; i += 1) gaps.push(times[i] - times[i - 1])
   gaps.sort((a, b) => a - b)
+
+  // Summary sizes. The guide publishes a max and a median for these, and previously
+  // cited this tool as the reproduction path while the tool did not compute them at
+  // all -- an empty reproduction path.
+  //
+  // Two measures are collected because they answer different questions:
+  //   textChars   - the summary text as persisted, useful for a size floor
+  //   outputTokens- the provider's own count for the summarization call, which is
+  //                 what a context budget is actually spent on
+  const summarySizes = []
+  for (const e of ownSummaries) {
+    const blocks = e.data?.summary
+    let chars = 0
+    if (Array.isArray(blocks)) {
+      for (const b of blocks) if (typeof b?.text === 'string') chars += b.text.length
+    } else if (typeof blocks === 'string') chars = blocks.length
+    const out = e.data?.usage?.outputTokens
+    summarySizes.push({
+      seq: e.seq,
+      chars,
+      outputTokens: typeof out === 'number' ? out : null,
+    })
+  }
 
   // Sessions that were handed off (session-rescue), if the marker exists.
   const handoff = events.some(e =>
     e.type === 'session/title' && typeof e.data?.title === 'string' && /已交接|handed off/i.test(e.data.title))
 
-  const session = events.find(e => e.type === 'session')
-
   return {
     dir: path.basename(path.dirname(file)),
     file: path.basename(file),
-    id: session?.id ?? path.basename(path.dirname(file)),
-    cwd: session?.cwd ?? '',
+    id: header?.id ?? path.basename(path.dirname(file)),
+    cwd: header?.cwd ?? '',
     events: events.length,
     frames,
     failedFrames,
-    starts: starts.length,
-    ends: ends.length,
-    summaries: summaries.length,
-    failed: failed.length,
+    // own-work counts: the figures the corpus totals are built from
+    starts: ownStarts.length,
+    ends: ends.filter(own).length,
+    summaries: ownSummaries.length,
+    failed: ownFailed.length,
+    // inheritance bookkeeping, so inflation is visible rather than silent
+    isFork,
+    parentSession,
+    seedLength,
+    inheritedStarts,
+    inheritedSummaries: summaries.length - ownSummaries.length,
+    inheritedFailed: failed.length - ownFailed.length,
+    rawStarts: starts.length,
+    rawSummaries: summaries.length,
+    rawFailed: failed.length,
     failureKinds,
     statuses,
     codes,
     gaps,
+    summarySizes,
     handoff,
-    lastTime: events.at(-1)?.time ?? session?.createdAt ?? 0,
+    lastTime: events.at(-1)?.time ?? header?.createdAt ?? 0,
   }
 }
 
@@ -258,6 +318,19 @@ function main() {
     summaries: rows.reduce((n, r) => n + r.summaries, 0),
     failed: rows.reduce((n, r) => n + r.failed, 0),
   }
+  // Fork inheritance: the same events replayed inside a child session's seed. These
+  // are counted by a naive pass and must not be. Reported rather than silently
+  // dropped, so a reader can see how much the corpus totals were inflated before.
+  const inheritance = {
+    forkSessions: rows.filter(r => r.isFork).length,
+    forksCarryingCompaction: rows.filter(r => r.isFork && r.inheritedStarts > 0).length,
+    inheritedStarts: rows.reduce((n, r) => n + r.inheritedStarts, 0),
+    inheritedSummaries: rows.reduce((n, r) => n + r.inheritedSummaries, 0),
+    inheritedFailed: rows.reduce((n, r) => n + r.inheritedFailed, 0),
+    rawStarts: rows.reduce((n, r) => n + r.rawStarts, 0),
+    rawSummaries: rows.reduce((n, r) => n + r.rawSummaries, 0),
+    rawFailed: rows.reduce((n, r) => n + r.rawFailed, 0),
+  }
   const withCompaction = rows.filter(r => r.starts > 0)
   const successRate = total.starts > 0 ? (total.summaries / total.starts) * 100 : null
 
@@ -269,6 +342,26 @@ function main() {
   const statuses = {}
   for (const r of rows) {
     for (const [k, v] of Object.entries(r.statuses)) statuses[k] = (statuses[k] ?? 0) + v
+  }
+
+  // Summary size distribution, seeded from the per-session records above.
+  const allSizes = rows.flatMap(r => r.summarySizes ?? [])
+  const charSizes = allSizes.map(s => s.chars).filter(n => n > 0).sort((a, b) => a - b)
+  const tokenSizes = allSizes.map(s => s.outputTokens).filter(n => typeof n === 'number').sort((a, b) => a - b)
+  const summarySizes = {
+    count: allSizes.length,
+    chars: {
+      n: charSizes.length,
+      min: charSizes[0] ?? null,
+      max: charSizes.at(-1) ?? null,
+      median: median(charSizes),
+    },
+    outputTokens: {
+      n: tokenSizes.length,
+      min: tokenSizes[0] ?? null,
+      max: tokenSizes.at(-1) ?? null,
+      median: median(tokenSizes),
+    },
   }
 
   // Defect inference.
@@ -325,6 +418,8 @@ function main() {
       logsFound: all.length,
       sessionsAnalysed: rows.length,
       totals: { ...total, withCompaction: withCompaction.length, successRate },
+      inheritance,
+      summarySizes,
       failureKinds: kinds,
       httpStatuses: statuses,
       findings,
@@ -339,7 +434,8 @@ function main() {
   console.log('  dsh-compaction-doctor')
   console.log('  =====================')
   console.log(`  root:     ${root}`)
-  console.log(`  logs:     ${all.length} found, ${rows.length} sessions analysed (newest version each)`)
+  console.log(`  logs:     ${all.length} files found, ${rows.length} analysed`
+    + (merge ? ' (union: every snapshot, so one session may appear more than once)' : ' (one snapshot per session)'))
   console.log('')
 
   console.log('  Compaction totals')
@@ -350,10 +446,42 @@ function main() {
   console.log(`    sessions with dumps   ${String(withCompaction.length).padStart(6)}`)
   console.log('')
 
+  // Make inheritance visible. Silently subtracting it would hide how much the
+  // naive count was inflated, which is exactly the fact a reader needs.
+  if (inheritance.inheritedStarts > 0) {
+    console.log('  Fork inheritance excluded from the totals above')
+    console.log(`    forked sessions                        ${String(inheritance.forkSessions).padStart(6)}`)
+    console.log(`    forks replaying a parent's compactions ${String(inheritance.forksCarryingCompaction).padStart(6)}`)
+    console.log(`    inherited compaction/start             ${String(inheritance.inheritedStarts).padStart(6)}`)
+    console.log(`    inherited compaction/summary           ${String(inheritance.inheritedSummaries).padStart(6)}`)
+    console.log(`    inherited failed closures              ${String(inheritance.inheritedFailed).padStart(6)}`)
+    console.log(`    naive totals would be          ${inheritance.rawStarts} / ${inheritance.rawSummaries} / ${inheritance.rawFailed}`)
+    console.log('')
+    console.log('    A forked session replays its parent\'s history inside seedLength.')
+    console.log('    Those events are the PARENT\'s work, counted again in the child\'s log.')
+    console.log('    Directory-based de-duplication cannot see it: the two live in')
+    console.log('    different directories.')
+    console.log('')
+  }
+
   if (Object.keys(kinds).length > 0) {
     console.log('  Failure taxonomy (by rendered error text)')
     for (const [k, v] of Object.entries(kinds).sort((a, b) => b[1] - a[1])) {
       console.log(`    ${k.padEnd(12)} ${String(v).padStart(6)}`)
+    }
+    console.log('')
+  }
+
+  if (summarySizes.count > 0) {
+    console.log('  Summary sizes (this session set only)')
+    console.log(`    recorded summaries      ${String(summarySizes.count).padStart(6)}`)
+    if (summarySizes.outputTokens.n > 0) {
+      const t = summarySizes.outputTokens
+      console.log(`    provider outputTokens   n=${t.n}  min=${t.min}  median=${t.median}  max=${t.max}`)
+    }
+    if (summarySizes.chars.n > 0) {
+      const c = summarySizes.chars
+      console.log(`    summary text chars      n=${c.n}  min=${c.min}  median=${c.median}  max=${c.max}`)
     }
     console.log('')
   }

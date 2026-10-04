@@ -169,7 +169,7 @@ $ DSH_SRC=/tmp/dsh node verify-feasibility/feasibility.mjs
   compactIfNeeded runs BEFORE next(): yes
 ```
 
-语料数字 —— 51 次启动、9 次摘要、42 次失败、239 次误判的 413 —— 需要会话日志。
+语料数字 —— 30 次启动、9 次摘要、21 次失败、239 次误判的 413 —— 需要会话日志。
 **它们不会吻合**，也不该吻合：它们描述的是一个用户的语料，而不是普适比率
 [EVIDENCE §8.1](EVIDENCE.md)。应该吻合的是*形状*：成功率远低于 100%，
 以及大量的 `413 → INVALID_REQUEST`，如果你的宿主有同样的缺陷。

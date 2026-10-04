@@ -178,7 +178,7 @@ $ DSH_SRC=/tmp/dsh node verify-feasibility/feasibility.mjs
   compactIfNeeded runs BEFORE next(): yes
 ```
 
-The corpus figures — 51 starts, 9 summaries, 42 failures, 239 misclassified 413s
+The corpus figures — 30 starts, 9 summaries, 21 failures, 239 misclassified 413s
 — require session logs. **They will not match**, and should not: they describe one
 user's corpus, not a universal rate [EVIDENCE §8.1](EVIDENCE.md). What should match
 is the *shape*: a success rate well below 100% and a large `413 →
