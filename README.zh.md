@@ -2,6 +2,12 @@
 
 # dsh-compaction-guide
 
+> **本仓库的译文是人工维护的，不是机器生成。** 如果你正在通过浏览器自带的翻译
+> 阅读英文版，它的措辞将与本仓库的中文文档不一致 —— 而本指南恰恰建立在
+> 机翻会抹平的那些区分之上，例如 `prune` 与 `compaction`、「已测量」与「推断」。
+> **[English version here](README.md)** — all 12 document pairs share one
+> terminology set (see [`TRANSLATING.md`](TRANSLATING.md)).
+
 **DeepSeek Harness 自动压缩指南：长会话为什么会坏、哪些已经被修好、哪些无法修。**
 
 > **这是一份指南，不是一个软件包。** 没有东西需要安装。仓库的主体是文档；

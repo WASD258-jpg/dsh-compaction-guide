@@ -2,6 +2,13 @@
 
 # dsh-compaction-guide
 
+> **The translations here are maintained by hand, not generated.** If you are
+> reading this through a browser's built-in translation, its wording will not
+> match the Chinese documents in this repository — and this guide turns on
+> distinctions a machine translation flattens, such as `prune` versus
+> `compaction` and "measured" versus "inferred". **[中文版在此](README.zh.md)**，
+> 全仓 12 对文档使用同一套术语（见 [`TRANSLATING.md`](TRANSLATING.md)）。
+
 **A guide to DeepSeek Harness automatic compaction: why long sessions break, what
 has already been fixed, and what remains unfixable.**
 
