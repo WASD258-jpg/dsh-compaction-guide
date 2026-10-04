@@ -7,7 +7,7 @@
 >
 > 本项目提供的是生态所缺的东西：**一张兼容性地图、一个诊断工具，以及两个没人填上的缺口。**
 >
-> 每个决策背后的证据见 [`PRIOR-ART.md`](PRIOR-ART.md)。
+> 每个决策背后的证据见 [`PRIOR-ART.md`](PRIOR-ART.zh.md)。
 
 ---
 
@@ -15,9 +15,9 @@
 
 | 项目 | 状态 | 它做什么 |
 |---|---|---|
-| [`tools/doctor.mjs`](tools/doctor.mjs) | **已完成** | 读取会话日志，报告压缩成功率、失败分类、HTTP 状态到 code 的映射，以及重试风暴检测。复现 [`EVIDENCE.md`](EVIDENCE.md) 中的每一个数字。 |
-| [`EVIDENCE.md`](EVIDENCE.md) | **已完成** | 方法论、原始计数、对照实验、复现命令。 |
-| [`PRIOR-ART.md`](PRIOR-ART.md) | **已完成** | 20 仓库覆盖矩阵、硬性不兼容、推荐组合，以及四个已验证的缺口。 |
+| [`tools/doctor.mjs`](tools/doctor.mjs) | **已完成** | 读取会话日志，报告压缩成功率、失败分类、HTTP 状态到 code 的映射，以及重试风暴检测。复现 [`EVIDENCE.md`](EVIDENCE.zh.md) 中的每一个数字。 |
+| [`EVIDENCE.md`](EVIDENCE.zh.md) | **已完成** | 方法论、原始计数、对照实验、复现命令。 |
+| [`PRIOR-ART.md`](PRIOR-ART.zh.md) | **已完成** | 20 仓库覆盖矩阵、硬性不兼容、推荐组合，以及四个已验证的缺口。 |
 | [`config/`](config/) | **已完成** | 零风险配置加固；可与任意插件组合搭配。 |
 
 ---
@@ -103,7 +103,7 @@ if (breakerTripped(session)) return next()
 ### ~~缺口 2~~ —— 按字节约束的摘要
 
 **状态：仍然空缺，但超出本仓库的范围。** 上游 [S16] 建议这么做，且不存在任何实现
-[PRIOR-ART §4](PRIOR-ART.md)。零件是齐的（[P3] 分块骨架，[P2] 字节估算）。
+[PRIOR-ART §4](PRIOR-ART.zh.md)。零件是齐的（[P3] 分块骨架，[P2] 字节估算）。
 
 这是对 `compaction-basic` 摘要器的**核心改动**，不是插件：摘要器在内部组装自己的请求。
 记录在此是为了让这个空缺保持可见，而不是作为本项目的承诺。
@@ -148,7 +148,7 @@ if (breakerTripped(session)) return next()
 
 - **另一个压缩后端** —— 两条理由，第二条是决定性的。
 
-  其一，已有五个；它们互斥（[`PRIOR-ART.md` §2.1](PRIOR-ART.md)），
+  其一，已有五个；它们互斥（[`PRIOR-ART.md` §2.1](PRIOR-ART.zh.md)），
   而且最好的那个已经处理了分块 [P3]。
 
   其二，**维护一个分支意味着你要承担那些困难且与缺陷无关的部分。**

@@ -9,12 +9,12 @@
 >
 > 这是一张兼容性地图。它正是本仓库存在的理由。
 >
-> **引用约定**：标记 `[P…]` 解析于 [`REFERENCES.md`](REFERENCES.md)。
+> **引用约定**：标记 `[P…]` 解析于 [`REFERENCES.md`](REFERENCES.zh.md)。
 > 标为 `[unverified]` 的结论仅凭元数据评估。
 
 **调查方法**：通过 `raw.githubusercontent.com` 对下列每个仓库做源码级阅读 ——
 读实现文件，而非 README 摘要。**没有克隆任何仓库，也没有执行任何插件**
-[EVIDENCE §8.5](EVIDENCE.md)。关于究竟验证了什么、没有验证什么，
+[EVIDENCE §8.5](EVIDENCE.zh.md)。关于究竟验证了什么、没有验证什么，
 见 [§6 局限](#6-局限)。
 
 ---
@@ -118,7 +118,7 @@ service "compaction" has been registered at <BasicCompactionEngine>
 在任一组合之上应用 [`config/`](config/)。锁定一个独立的大窗口摘要模型是影响最大的单项改动，
 且它与这里所有插件都正交。
 
-**风险**：见 [`config/README.md` §5](config/README.md) —— 摘要提供方拼写错误会在运行时
+**风险**：见 [`config/README.md` §5](config/README.zh.md) —— 摘要提供方拼写错误会在运行时
 而非加载时失败 [O22a]，并且这些设置的好处是**推断的而非实证的** [§5.6]。
 
 ### 3.3 不推荐的做法
@@ -187,7 +187,7 @@ service "compaction" has been registered at <BasicCompactionEngine>
 
 ### 缺口 4 —— 没有全局熔断器（最大的缺口）
 
-记录在 [`EVIDENCE.md`](EVIDENCE.md) 中的用户可见症状：**18 次连续失败，
+记录在 [`EVIDENCE.md`](EVIDENCE.zh.md) 中的用户可见症状：**18 次连续失败，
 中位间隔 101 s，且间隔不随失败次数增长。** 生态中没有任何东西处理它。
 
 唯一真正的退避是 `huohua-dev` 的 `2 ** (count - 1)`（60 s → 600 s，
@@ -339,11 +339,11 @@ maxRequestBytes / targetRequestBytes / retainBytes
 读的是实现文件，不是 README 的文字。`retainTokens = 0` 的结论 [P3][P4]、
 互斥行为 [P6]、哈希门 [P4] 以及退避公式 [P4] 都在代码中得到确认。
 
-**未验证** [EVIDENCE §8.5](EVIDENCE.md)：
+**未验证** [EVIDENCE §8.5](EVIDENCE.zh.md)：
 
 - **没有克隆任何仓库，也没有执行任何插件，只有一个例外。**
   [P1] 被安装并在真实的 `0.2.0-rc.2` 宿主上实际驱动过
-  [PRIOR-ART §5.1](PRIOR-ART.md) [O15]。此处其他每一条兼容性结论都是静态分析。
+  [PRIOR-ART §5.1](PRIOR-ART.zh.md) [O15]。此处其他每一条兼容性结论都是静态分析。
   启动失败的引用转引自 `@treeseed/dsh-chapters` 自己的兼容性说明 [P6]，并非复现。
 - **八个仓库仅凭元数据评估**（在详细报告中标为 `[unverified]`）。
   那些单元格是源自 README 的推断，**不得当作最终结论**。

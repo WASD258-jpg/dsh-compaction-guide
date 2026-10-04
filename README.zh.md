@@ -14,7 +14,7 @@
 > 诊断工具与验证脚本的存在是为了让每一项主张都可核查，而不是作为产品。
 >
 > **引用约定。** 事实性陈述带行内标记 —— `[S…]` 固定版本源码，`[O…]` 本研究的测量，
-> `[P…]` 先行工作 —— 全部解析于 [`REFERENCES.md`](REFERENCES.md)。**推断而非实测**
+> `[P…]` 先行工作 —— 全部解析于 [`REFERENCES.md`](REFERENCES.zh.md)。**推断而非实测**
 > 的结论标 `[inferred]`。以两种口径给出的数字分别标注 *去重* 与 *合并* [O3]。
 
 ---
@@ -23,13 +23,13 @@
 
 | 如果你的目的是… | 读这个 |
 |---|---|
-| 修好一个正在出问题的会话 | [`guide/quick-guide.md`](guide/quick-guide.md) |
+| 修好一个正在出问题的会话 | [`guide/quick-guide.md`](guide/quick-guide.zh.md) |
 | 理解三条失败机制 | [下方 §2–§4](#2-机制-a--溢出恢复不可达) |
-| 知道已有哪些插件、哪些互相冲突 | [`PRIOR-ART.md`](PRIOR-ART.md) |
+| 知道已有哪些插件、哪些互相冲突 | [`PRIOR-ART.md`](PRIOR-ART.zh.md) |
 | 检查自己的日志 | [`tools/doctor.mjs`](tools/doctor.mjs) |
-| 看每个数字是怎么来的 | [`EVIDENCE.md`](EVIDENCE.md) |
+| 看每个数字是怎么来的 | [`EVIDENCE.md`](EVIDENCE.zh.md) |
 | **查看此前错在哪里** | **[CORRECTIONS.zh.md](CORRECTIONS.zh.md)** |
-| 知道还有什么没修 | [`PLAN.md`](PLAN.md) |
+| 知道还有什么没修 | [`PLAN.md`](PLAN.zh.md) |
 
 ---
 
@@ -150,7 +150,7 @@ if (failure.code !== CONTEXT_WINDOW_EXCEEDED_CODE) return next()
 **用户运行 `/rescue`** → 交接，其中 `session/title` 与 `handoffs.jsonl.at`
 共享同一个毫秒时间戳 `1789659712327`，且触发事件的 `source.kind` 为 `"user"` [O12]。
 
-**怎么办**：[`guide/quick-guide.md` §3](guide/quick-guide.md)。
+**怎么办**：[`guide/quick-guide.md` §3](guide/quick-guide.zh.md)。
 
 ---
 
@@ -201,7 +201,7 @@ if (failure.code !== CONTEXT_WINDOW_EXCEEDED_CODE) return next()
 唯一的溢出恢复入口是 `agent/request-error` waterfall，由 loop 派发。
 直连调用因此**永不派发该事件**，于是**摘要溢出没有任何恢复路径**。
 
-**怎么办**：[`config/README.md`](config/README.md) —— 包括设置**放在哪里**，
+**怎么办**：[`config/README.md`](config/README.zh.md) —— 包括设置**放在哪里**，
 那不是大多数人会去找的地方 [O17][O18]。
 
 ---
@@ -251,7 +251,7 @@ if (breakerTripped(session)) return next()
 **这个否定性结论被完整公开**，因为该布局无法从任何单一扩展点看出，插件作者
 完全可能先投入精力才发现。证据见 [`verify-feasibility/`](verify-feasibility/)。
 
-**今天你能做的**：减少触发次数（[`guide/quick-guide.md` §7](guide/quick-guide.md)），
+**今天你能做的**：减少触发次数（[`guide/quick-guide.md` §7](guide/quick-guide.zh.md)），
 以及上报上游。
 
 ---
@@ -296,13 +296,13 @@ threshold = floor(min(W × thresholdRatio, W − O − headroomTokens))
 
 | 页面 | 内容 |
 |---|---|
-| [`quick-guide.md`](guide/quick-guide.md) | 症状 → 成因 → 行动，附代价与残余风险 |
+| [`quick-guide.md`](guide/quick-guide.zh.md) | 症状 → 成因 → 行动，附代价与残余风险 |
 
 ### 7.2 [`tools/doctor.mjs`](tools/doctor.mjs) —— 诊断
 
 **它是本指南中每一个数字的复现路径** —— 不是产品。
 
-### 7.3 [`PRIOR-ART.md`](PRIOR-ART.md) —— 兼容性地图
+### 7.3 [`PRIOR-ART.md`](PRIOR-ART.zh.md) —— 兼容性地图
 
 评估 20 个仓库，含覆盖矩阵、**硬性不兼容**、推荐组合。它之所以存在，是因为生态中的
 冲突无法从单个 README 中看出：五个插件替换同一个服务因而**无法同时启动**。
@@ -314,13 +314,13 @@ threshold = floor(min(W × thresholdRatio, W − O − headroomTokens))
 以及**代价是什么** [O22]。每个推荐配置块都在真实 `0.2.0-rc.2` 引擎上构造通过 [O20]，
 七个畸形变体确认被拒绝而非静默失败 [O21]。
 
-### 7.5 [`EVIDENCE.md`](EVIDENCE.md) 与 [`REFERENCES.md`](REFERENCES.md)
+### 7.5 [`EVIDENCE.md`](EVIDENCE.zh.md) 与 [`REFERENCES.md`](REFERENCES.zh.md)
 
 完整方法学、原始计数、对照实验，以及九条明示的有效性威胁。
 引用行号由 [`verify-refs/check-refs.mjs`](verify-refs/check-refs.mjs)
 **模式匹配解析**而非凭记忆誊写。
 
-### 7.6 [`PLAN.md`](PLAN.md)
+### 7.6 [`PLAN.md`](PLAN.zh.md)
 
 还剩什么没修，以及一项结案：Gap 4（熔断）被记录为**上游请求**而非计划，
 因为插件无法实现它 [O24]。
@@ -359,7 +359,7 @@ threshold = floor(min(W × thresholdRatio, W − O − headroomTokens))
 
 **每一项主张都注明了产出它的脚本。** 有的读上游源码，有的需要安装 harness 包，
 有的什么都不需要 —— 完整分类（含预期输出与失败症状）见
-[`REPRODUCING.md`](REPRODUCING.md)。
+[`REPRODUCING.md`](REPRODUCING.zh.md)。
 
 两个无需任何前置条件的：
 
@@ -403,7 +403,7 @@ node verify-refs/check-refs.mjs /tmp/dsh  # 解析每一条 [S…] 引用
 > 请重新运行 [`tools/doctor.mjs`](tools/doctor.mjs)，并对照上面的**日期**，
 > 而不是只对照数字本身。
 >
-> 按 [`REPRODUCING.md`](REPRODUCING.md) 操作、且**在同一份语料上**的读者应看到相同输出。
+> 按 [`REPRODUCING.md`](REPRODUCING.zh.md) 操作、且**在同一份语料上**的读者应看到相同输出。
 > **若有任何一项无法复现，那是值得上报的缺陷** ——
 > 本研究中若干次验证尝试第一次都是错的，这里发布的是修正后的版本。
 

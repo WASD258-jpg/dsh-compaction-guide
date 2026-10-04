@@ -2,8 +2,8 @@
 
 # 快速指南 —— 会话变慢、损坏或垂死时该怎么办
 
-> 属于 [dsh-compaction-guide](../README.md) 的一部分。引用 `[S…]`/`[O…]`/`[P…]`
-> 解析于 [`../REFERENCES.md`](../REFERENCES.md)。
+> 属于 [dsh-compaction-guide](../README.zh.md) 的一部分。引用 `[S…]`/`[O…]`/`[P…]`
+> 解析于 [`../REFERENCES.md`](../REFERENCES.zh.md)。
 
 本页回答一个问题：**我的会话表现异常 —— 我该做什么？**
 
@@ -57,7 +57,7 @@ node tools/doctor.mjs "$DSH_HOME/sessions"
 完整说明，包括这个设置**位于何处**（一个常见陷阱 —— 它不在你的 profile patch 层
 [O17][O18]）：
 
-→ [`../config/README.md`](../config/README.md)
+→ [`../config/README.md`](../config/README.zh.md)
 
 **代价。** 更低的 `thresholdRatio` 会让压缩**提前 26%** 触发，这意味着
 **更多按真实 token 计费的摘要调用** [O22]。如果你不愿付这个代价，只固定摘要路由，
@@ -96,7 +96,7 @@ node tools/doctor.mjs "$DSH_HOME/sessions"
 因此无关的 413 —— 比如图片尺寸拒绝 —— 也会被重新分类。影响是有界的：浪费一次压缩，
 原始错误仍然保留。先用 `mode: 'warn'` 观察你自己流量上的比率。
 
-→ [`../PRIOR-ART.md`](../PRIOR-ART.md) 了解该插件的完整适用范围及其不兼容性。
+→ [`../PRIOR-ART.md`](../PRIOR-ART.zh.md) 了解该插件的完整适用范围及其不兼容性。
 
 ---
 
@@ -210,7 +210,7 @@ if (prune !== undefined) {
 | 想「从根本上」自己修 | 先弄清接缝：`summarize()` 是注入的，所以有界摘要器是一项小提案 | **fork 整个引擎** —— 你要负责 566 行与缺陷无关的事务代码 |
 
 **不要组合两个压缩后端。** 五个插件替换同一个服务，并且**一起启动会失败**；
-见 [`../PRIOR-ART.md` §2](../PRIOR-ART.md)。
+见 [`../PRIOR-ART.md` §2](../PRIOR-ART.zh.md)。
 
 ---
 
@@ -225,4 +225,4 @@ if (prune !== undefined) {
 | 没有退避的重试风暴 | 尚未提交 —— 守卫属于发起该尝试的那个 pre-step 监听器 [O24]。**你自己掌控的后端就是那个监听器。** |
 
 附上你的诊断输出（`--json`）以及你正在运行的上游修订版。本指南中的计数来自一个语料 [O1]，
-并且明确**不可推广** [EVIDENCE §8.1](../EVIDENCE.md) —— 你的可能不同，而那种不同本身就有价值。
+并且明确**不可推广** [EVIDENCE §8.1](../EVIDENCE.zh.md) —— 你的可能不同，而那种不同本身就有价值。

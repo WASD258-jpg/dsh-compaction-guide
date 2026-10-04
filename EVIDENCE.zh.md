@@ -4,7 +4,7 @@
 
 > **与 [`README.md`](README.md) 的关系。** README 陈述结论；本文档记录每一项结论
 > 是如何取得的。标记 `[S…]`/`[O…]`/`[P…]` 解析于
-> [`REFERENCES.md`](REFERENCES.md)。此处的每一个数字都由
+> [`REFERENCES.md`](REFERENCES.zh.md)。此处的每一个数字都由
 > `tools/doctor.mjs` 重新生成。
 
 ---
@@ -410,7 +410,7 @@ console.log(STRUCTURED.test(fallback), TOO_LARGE.test(fallback), EXCEEDS.test(fa
 
 ## 8. 对有效性的威胁
 
-明确列出，因为 [PLAN.md](PLAN.md) 中的建议正建立其上。
+明确列出，因为 [PLAN.md](PLAN.zh.md) 中的建议正建立其上。
 
 **8.1 单一语料范围。** 所有计数都来自一个用户的会话日志 [O1]。
 那些*频率* —— 30.0% 成功率、239/239 误判、18 次连续失败
@@ -436,13 +436,13 @@ console.log(STRUCTURED.test(fallback), TOO_LARGE.test(fallback), EXCEEDS.test(fa
 **静默地丢掉了近期证据** —— 一个目录报告 5 次压缩而非 7 次，且 413 失败完全消失 ——
 因此该工具按时间新旧优先、体量其次打分。
 
-**8.5 静态的先行工作分析，只有一个例外。** [PRIOR-ART.md](PRIOR-ART.md) 中的兼容性
+**8.5 静态的先行工作分析，只有一个例外。** [PRIOR-ART.md](PRIOR-ART.zh.md) 中的兼容性
 与覆盖度结论大多来自源码级阅读而非执行，且唯一一条启动失败的引用转引自第三方自己的
 记录 [P6]，并非在此复现。二十个仓库中有八个仅凭元数据评估，并已如此标注。
 
 **那个例外是 [P1]**，其版本门控曾是一项已声明的风险，如今是一条实测结果 [O15][O16]：
 它在 `0.2.0-rc.2` 宿主上可安装、可加载、可正确重分类，附带一条注意事项报告于
-[PRIOR-ART §5.2](PRIOR-ART.md)。该测量覆盖的是**一个宿主版本上的一个插件**；
+[PRIOR-ART §5.2](PRIOR-ART.zh.md)。该测量覆盖的是**一个宿主版本上的一个插件**；
 它不推广到另外十九个仓库，也不覆盖 `0.2.1-alpha.1`。
 
 **8.6 一处尚未解决的先行工作源码冲突。** `huohua-dev` 的 README 声明的默认值
@@ -456,7 +456,7 @@ console.log(STRUCTURED.test(fallback), TOO_LARGE.test(fallback), EXCEEDS.test(fa
 本语料中观测到的每一次 413 都是整请求尺寸拒绝 [O6]，但语料里没有任何图像拒绝的 413
 可充当反例。
 
-**8.8 建议仅在一个宿主版本上验证。** 发布在 [`config/`](config/README.md) 的每一个
+**8.8 建议仅在一个宿主版本上验证。** 发布在 [`config/`](config/README.zh.md) 的每一个
 配置块都是针对 `0.2.0-rc.2` 构造的 [O20]，并有七个畸形变体被确认拒绝 [O21]。
 **`0.2.1-alpha.1` 未被测试。** 就所引源码所示，引擎的校验路径在两个修订之间没有变化
 [S0a][S0b]，但那是从源码得出的推断，不是测量。
@@ -466,7 +466,7 @@ console.log(STRUCTURED.test(fallback), TOO_LARGE.test(fallback), EXCEEDS.test(fa
 
 - 该插件的反向用例测试最初直接调用 `oversizeFailure()`，
   绕过了 `classifyOversizeFailure()` 中的守卫，于是看起来把八个反例全部重分类
-  [PRIOR-ART §7](PRIOR-ART.md)。
+  [PRIOR-ART §7](PRIOR-ART.zh.md)。
 - 配置测试最初调用 `BasicCompactionEngine.Config()`，那只跑 schema 层；
   于是三个畸形配置块看起来被接受了 [O19]。
 

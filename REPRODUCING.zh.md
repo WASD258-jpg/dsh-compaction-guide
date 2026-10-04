@@ -143,7 +143,7 @@ node verify-config/archive-pruner-probe/isolation-test.mjs
 
 它们以退出码 0 结束，因为一个演示错误的脚本在演示该错误这件事上是成功的。
 它们的价值在于文件头注释，以及
-[`archive-pruner-probe/README.md`](verify-config/archive-pruner-probe/README.md)。
+[`archive-pruner-probe/README.md`](verify-config/archive-pruner-probe/README.zh.md)。
 
 ---
 
@@ -171,7 +171,7 @@ $ DSH_SRC=/tmp/dsh node verify-feasibility/feasibility.mjs
 
 语料数字 —— 30 次启动、9 次摘要、21 次失败、239 次误判的 413 —— 需要会话日志。
 **它们不会吻合**，也不该吻合：它们描述的是一个用户的语料，而不是普适比率
-[EVIDENCE §8.1](EVIDENCE.md)。应该吻合的是*形状*：成功率远低于 100%，
+[EVIDENCE §8.1](EVIDENCE.zh.md)。应该吻合的是*形状*：成功率远低于 100%，
 以及大量的 `413 → INVALID_REQUEST`，如果你的宿主有同样的缺陷。
 
 ---
