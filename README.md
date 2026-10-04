@@ -33,6 +33,7 @@ has already been fixed, and what remains unfixable.**
 | Know which plugins already exist and which conflict | [`PRIOR-ART.md`](PRIOR-ART.md) |
 | Check your own logs | [`tools/doctor.mjs`](tools/doctor.mjs) |
 | See how every number was obtained | [`EVIDENCE.md`](EVIDENCE.md) |
+| **Check what was wrong before** | **[`CORRECTIONS.md`](CORRECTIONS.md)** |
 | Know what is still broken | [`PLAN.md`](PLAN.md) |
 
 ---

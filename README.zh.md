@@ -28,6 +28,7 @@
 | 知道已有哪些插件、哪些互相冲突 | [`PRIOR-ART.md`](PRIOR-ART.md) |
 | 检查自己的日志 | [`tools/doctor.mjs`](tools/doctor.mjs) |
 | 看每个数字是怎么来的 | [`EVIDENCE.md`](EVIDENCE.md) |
+| **查看此前错在哪里** | **[CORRECTIONS.zh.md](CORRECTIONS.zh.md)** |
 | 知道还有什么没修 | [`PLAN.md`](PLAN.md) |
 
 ---
