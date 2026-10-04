@@ -167,12 +167,18 @@ The cleanest available evidence. Within a single session, both statuses occurred
 
 | Status | Classified as | Triggered compaction? | Outcome |
 |---|---|---|---|
-| **400** | `CONTEXT_WINDOW_EXCEEDED` | **3 times**, within **+9 ms / +25 ms / +32 ms** | **all succeeded** |
+| **400** | `CONTEXT_WINDOW_EXCEEDED` | **2 times**, at **+25 ms** and **+32 ms** | **both succeeded** |
 | **413** | `INVALID_REQUEST` | **never** | failed |
 
 **Same session, same model, same declared window. The only variable is the HTTP
 status code.** This rules out "the compaction logic itself is broken" — the logic
 works whenever it is reached.
+
+> **Corrected count.** An earlier version of this table said three times
+> (`+9 / +25 / +32 ms`). The `+9 ms` pairing exists, but in a *different snapshot*
+> of the same session rather than in the file under analysis — the
+> snapshot-duplication error [O3] warns about. Within one file there are two
+> occurrences. The conclusion is unchanged: 400 triggers compaction, 413 does not.
 
 ### 3.4 Causal direction of "已交接"
 

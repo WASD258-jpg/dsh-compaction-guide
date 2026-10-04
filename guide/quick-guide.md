@@ -85,7 +85,7 @@ shrinks; nothing you do helps.
 classified `INVALID_REQUEST` [S1][S2][S3], while the recovery hook requires
 `CONTEXT_WINDOW_EXCEEDED` [S4]. **Of 239 observed 413s, 100% were misclassified**
 [O6]. A within-session control confirms the mechanism: status **400** triggered
-compaction 3 times and **all 3 succeeded**; status **413** triggered it **zero
+compaction twice and **both succeeded**; status **413** triggered it **zero
 times** [O10].
 
 **Note on the "handed off" state.** If your UI shows a handoff, that is **not**

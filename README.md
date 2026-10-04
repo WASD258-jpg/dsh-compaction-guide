@@ -155,7 +155,7 @@ window, the only variable is the HTTP status [O10]:
 
 | Status | Assigned code | Triggered compaction | Outcome |
 |---|---|---|---|
-| **400** | `CONTEXT_WINDOW_EXCEEDED` | **3 times**, at +9 ms / +25 ms / +32 ms | **all succeeded** |
+| **400** | `CONTEXT_WINDOW_EXCEEDED` | **2 times**, at +25 ms and +32 ms | **both succeeded** |
 | **413** | `INVALID_REQUEST` | **never** | failed |
 
 This rules out "the compaction logic is broken": the logic succeeds whenever it is

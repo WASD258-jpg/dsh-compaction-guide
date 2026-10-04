@@ -124,7 +124,7 @@ if (failure.code !== CONTEXT_WINDOW_EXCEEDED_CODE) return next()
 
 | 状态 | 赋予的码 | 是否触发压缩 | 结果 |
 |---|---|---|---|
-| **400** | `CONTEXT_WINDOW_EXCEEDED` | **3 次**，分别在 +9ms / +25ms / +32ms | **全部成功** |
+| **400** | `CONTEXT_WINDOW_EXCEEDED` | **2 次**，分别在 +25ms / +32ms | **两次都成功** |
 | **413** | `INVALID_REQUEST` | **从未** | 失败 |
 
 这排除了「压缩逻辑本身坏了」：只要逻辑被触达，它就成功。
