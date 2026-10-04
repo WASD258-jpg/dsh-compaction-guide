@@ -146,8 +146,26 @@ if (breakerTripped(session)) return next()
 
 ## 非目标
 
-- **另一个压缩后端。** 已有五个；它们互斥
-  （[`PRIOR-ART.md` §2.1](PRIOR-ART.md)），而且最好的那个已经处理了分块 [P3]。
+- **另一个压缩后端** —— 两条独立理由，第二条是决定性的。
+
+  其一，已有五个；它们互斥（[`PRIOR-ART.md` §2.1](PRIOR-ART.md)），
+  而且最好的那个已经处理了分块 [P3]。
+
+  其二，**替换后端够不到本指南识别的任何一条根因。**
+  官方 `CompactionEngine` 抽象只暴露三个钩子 ——
+  `compactIfNeeded`、`compactRegion`、`compactNow`
+  （`compaction-basic/src/index.ts:269/358/383`）。它们决定*何时*压缩、*压哪一段*。
+  它们不决定：
+
+  | 根因 | 实际位于何处 | 后端能否触及 |
+  |---|---|---|
+  | 413 被误判为 `INVALID_REQUEST`（机制 A） | `llm-deepseek/src/transport.ts:32-33` —— **LLM 适配器层**，位于压缩层之下 | **否** |
+  | 摘要请求无界（机制 B） | `summarizer.ts:120` 的 `summarizeWithLlm` —— 独立函数；`compactRegion` 只转调 `compactSurfaceRegion` | **否** |
+
+  因此「官方预留了扩展接缝」**不**构成「可以靠自研后端修好」的理由。
+  接缝是真的，但它对这两条缺陷都在错误的层上。
+  **建议：不要把 `CompactionEngine` 的存在读作重写压缩的邀请。**
+
 - **另一个 413 分类器。** [P1] 覆盖全部三种触发形态
   （[S15][S16][S17]）且是失败即闭合的。依赖它。
 - **修改 DSH 安装目录下的文件。** 这里的一切都是插件或覆盖层；没有任何东西给厂商代码打补丁。

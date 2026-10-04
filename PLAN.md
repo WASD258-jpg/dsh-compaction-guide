@@ -160,9 +160,29 @@ still present.** Contribute findings upstream rather than maintaining a fork.
 
 ## Non-goals
 
-- **Another compaction backend.** Five exist; they are mutually exclusive
+- **Another compaction backend** — for two independent reasons, and the second is
+  the decisive one.
+
+  First, five already exist; they are mutually exclusive
   ([`PRIOR-ART.md` §2.1](PRIOR-ART.md)) and the best one already handles chunking
   [P3].
+
+  Second, **a replacement backend cannot reach either root cause this guide
+  identifies.** The official `CompactionEngine` abstraction exposes three hooks —
+  `compactIfNeeded`, `compactRegion`, `compactNow`
+  (`compaction-basic/src/index.ts:269/358/383`). They decide *when* to compact and
+  *which region* to compact. They do not decide:
+
+  | Root cause | Where it actually lives | Reachable from a backend? |
+  |---|---|---|
+  | 413 misclassified as `INVALID_REQUEST` (Mechanism A) | `llm-deepseek/src/transport.ts:32-33` — the **LLM adapter**, below the compaction layer | **No** |
+  | Summarization request unbounded (Mechanism B) | `summarizer.ts:120` `summarizeWithLlm` — a standalone function; `compactRegion` merely delegates to `compactSurfaceRegion` | **No** |
+
+  So "the official code reserves an extensibility seam" is **not** a reason to
+  expect a fork to fix this. The seam is real, and it is in the wrong layer for
+  both defects. **Recommendation: do not read the presence of `CompactionEngine`
+  as an invitation to reimplement compaction.**
+
 - **Another 413 classifier.** [P1] covers all three trigger shapes
   ([S15][S16][S17]) and is fail-closed. Depend on it.
 - **Modifying files under the DSH installation.** Everything here is a plugin or
