@@ -152,3 +152,45 @@ rather than the number alone.
 4. **Open an issue.** Every correction on this page was found by someone checking a
    claim rather than trusting it — including the ones found by an adversarial audit of
    this repository's own work.
+
+---
+
+## 7. A package was begun and deleted
+
+**Nothing was published, so there is nothing to uninstall.** Recorded because the claim
+appeared in this repository's working notes and in `[O15]`, and a reader following either
+would have drawn the wrong conclusion.
+
+**What was claimed.** That `@argszero/cordis-plugin-length-stop-overflow` cannot be used on
+DSH 0.2.x, because its `peerDependencies` on `@deepseek-ai/dsh-llm` exclude every 0.2.x
+release — and worse, that a plain install would silently pull a *second* copy of `dsh-llm`
+at 0.1.6-alpha.2 and wire the plugin to a harness version that is not the one running. A
+wrapper package was started to fix that.
+
+**What was actually true.** Both observations came from a **scratch package** that
+deliberately resolved `0.2.0-rc.2`, which is not how a profile resolves anything. Walking
+Node's resolution upward from a real profile directory shows a different picture:
+
+| Level | What is there |
+|---|---|
+| `~/.dsh/profiles/web/node_modules/@deepseek-ai/dsh-llm` | absent — the profile has no `@deepseek-ai` of its own |
+| `~/.dsh/profiles/node_modules/@deepseek-ai/dsh-llm` | a **symlink** to the machine's global install |
+| that target | **0.1.6-alpha.1** |
+
+`0.1.6-alpha.1` is inside the plugin's declared range (`>=0.1.6-alpha.1 <0.2.0`). The same
+walk from `desktop`, `tui` and `default` reaches the same copy. **So in a normal profile the
+peer range is not an obstacle, no override is needed, and no wrapper is needed.**
+
+**Why the two differ, and what it cost.** A scratch package resolves from an empty
+`node_modules`, so the only thing that can satisfy a peer is a registry fetch — which is
+exactly what produced the 0.1.6-alpha.2 copy. A profile resolves from a shared layer that
+already holds the harness packages. **The defect was an artefact of the test environment, and
+it looked convincing because it was measured rather than assumed.**
+
+The mistake is the one this project has now recorded several times: **verifying in one
+context and reporting about another.** It cost a package that had to be thrown away, and it
+was caught only because the question "does the real profile agree?" was asked before
+publishing rather than after.
+
+**[O15]** now carries a scope note, **[O27]** records the profile measurement, and the README
+cites the profile result rather than the scratch one.

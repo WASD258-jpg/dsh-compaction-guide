@@ -64,13 +64,14 @@ comparison:
    [O11][S11].
 
 A prior-art review of 20 repositories finds mechanism 1 **already solved** by a
-maintained plugin [P1] — verified working on this host [O15] — and mechanism 2
-**structurally eliminated** by several others [P2][P3][P5], including one backend
-that chunks and merges with a real tokenizer [P3]. Mechanism 3 has **no
-implementation among the plugins surveyed**, and none *can* add one from outside:
-feasibility testing shows no extension point can suppress a `compaction-basic`
-attempt [O24]. **A replacement backend is a different matter** — it owns the
-listener that makes the attempt, so a breaker is implementable there
+maintained plugin [P1] — installed through the normal profile path, where it needs no
+override, because a real profile resolves the harness packages to a version its peer
+range includes [O27] — and mechanism 2 **structurally eliminated** by several others
+[P2][P3][P5], including one backend that chunks and merges with a real tokenizer [P3].
+Mechanism 3 has **no implementation among the plugins surveyed**, and none *can* add one
+from outside: feasibility testing shows no extension point can suppress a
+`compaction-basic` attempt [O24]. **A replacement backend is a different matter** — it
+owns the listener that makes the attempt, so a breaker is implementable there
 ([`PLAN.md`](PLAN.md) Non-goals).
 
 **This guide therefore documents, verifies, and points at existing fixes rather
