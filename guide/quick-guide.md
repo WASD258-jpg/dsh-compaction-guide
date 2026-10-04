@@ -133,11 +133,13 @@ The fix needs a guard inside the upstream listener.
 
 **What you can do today:**
 
-1. **Reduce the number of triggers**, so fewer opportunities to fail — see [§7](#7-the-proactive-prune).
-2. **Make failures visible.** Today every failure is a bare `logger.warn` [S11];
+1. **Make failures visible.** Today every failure is a bare `logger.warn` [S11];
    nothing tells you compaction is thrashing.
-3. **Treat a stuck session as unrecoverable sooner** rather than waiting through
+2. **Treat a stuck session as unrecoverable sooner** rather than waiting through
    dozens of retries.
+3. ~~Reduce the number of triggers with a plugin~~ — **measured and retracted;
+   see [§7](#7-the-proactive-prune--measured-and-it-does-not-work).** The
+   mechanism it relied on is already performed by `compaction-basic` itself.
 
 The negative result is published in full because the layout is not apparent from
 reading any single extension point: [`../verify-feasibility/`](../verify-feasibility/).
@@ -174,42 +176,54 @@ diagnostic counts by structured event type and payload field, not by substring.
 
 ---
 
-## 7. The proactive prune
+## 7. The proactive prune — measured, and it does not work
 
-**Applies when** you want to reduce how often compaction fires.
+**This section previously recommended a plugin. Measurement has since shown that
+recommendation was wrong, and it is retracted here rather than quietly deleted.**
 
-The tool-result pruner can be invoked independently — verified: a third-party
-plugin can obtain the service and call `pruneSession()` successfully [O26].
+The plugin was built on a premise that turns out to be false: that running the
+tool-result pruner *earlier* would reduce how often compaction fires. Two
+independent measurements refute it.
 
-**Shipped as a separate package, `dsh-compaction-prune` — but read its limits
-first.** It is a deliberately partial measure, and its own README says so. It is
-not published to a registry yet; build it from source until it is.
+**`compaction-basic` already runs the pruner before it compacts, and re-measures.**
+From `packages/compaction/compaction-basic/src/index.ts`:
 
-```sh
-npm install dsh-compaction-prune
+```ts
+const prune = this.ctx.get('toolResultPruner')   // :292
+if (prune !== undefined) {
+  prune.pruneSession(agent.session)              // :297  prunes first
+  measurement = meter.measure(agent.session)     // :298  re-measures
+}
 ```
 
-```yaml
-- insert:
-    - id: compaction-prune
-      name: 'dsh-compaction-prune'
-      config:
-        mode: warn      # observe first; it mutates durable session state
-```
+So at the moment compaction decides to act, the pruner has **already** reclaimed
+what it can. "Earlier" has no room to exist: the plugin's whole strategy is to do,
+sooner, a thing that has already been done.
 
-**What it does.** Trims oversized tool outputs *before* the context reaches the
-compaction threshold, so compaction is triggered less often.
+**The arithmetic does not close.** Replaying the recorded token trajectory of every
+session with compaction activity, and granting the plugin its intended effect:
+**7 of 8 compactions remain unavoidable**, because at each of those boundaries the
+pruner's remaining reach is **exactly 0**. The single avoidance sits in the only
+session where the pruner had never run, and cleared a **258-token** crossing —
+0.038% of the window.
 
-**What it does not do.** It does **not** add backoff. If a compaction does fail,
-retries are still unthrottled [§4](#4-retry-storms). Treat it as reducing the
-*number of opportunities* to fail, not as making failure safe.
+**And in a real deployment it cannot execute at all.** `Session.append()` sets its
+re-entrancy guard *before* dispatching `session/event`, and clears it in `finally`
+— so a `session/event` listener runs inside the guarded window. A prune attempted
+from that listener re-enters a guarded append and throws
+`session append cannot reenter while another append is being published`. The
+plugin's own `catch` swallows it, so the symptom is silence.
 
-**Not verified end-to-end.** Each step is tested in isolation, but no measurement
-demonstrates that enabling it on a long session actually reduces compaction
-attempts. If you try it, that before/after is the number worth reporting.
+> **Do not install `dsh-compaction-prune` expecting it to reduce compaction.**
+> Measured on this corpus it reduces neither compaction attempts nor triggers, and
+> in a live session its prune never lands. The measurement report, with an
+> independent re-derivation from raw bytes, is in that repository's `REPORT.md`.
 
-> **This is not the fix for a dying session.** If your sessions stop making
-> progress entirely, §3 is the one that matters.
+**What this section is still good for.** It is a worked example of the failure
+mode this guide documents: a plausible mechanism, tested in pieces, that does not
+survive contact with the whole system. The premise was never checked against
+`compaction-basic`'s own ordering — the same "verified the part, reported the
+whole" error that produced the four corrections in `verify-config/`.
 
 ---
 
@@ -217,7 +231,7 @@ attempts. If you try it, that before/after is the number worth reporting.
 
 | If your priority is… | Do this | Not this |
 |---|---|---|
-| Stop sessions dying at all | §3 (classification) + §2 (summarization route) | §7 alone — it only delays |
+| Stop sessions dying at all | §3 (classification) + §2 (summarization route) | §7 — measured, it does not work |
 | Keep cost down | §2's summarization route only | Lowering `thresholdRatio` — costs more calls |
 | Understand what happened | §1 diagnostic | Guessing from the UI |
 | Fix retry storms | Nothing works yet — report upstream | Any plugin — none can [O24] |

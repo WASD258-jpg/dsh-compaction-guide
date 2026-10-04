@@ -65,26 +65,43 @@ as a subclass; the counter needs to live where both paths can see it.
 from reading any single extension point, and a plugin author could reasonably
 spend the effort before discovering it.
 
-### What *was* built instead — `dsh-compaction-prune`
+### What *was* built instead — `dsh-compaction-prune`, and why it was withdrawn
 
-**Status: shipped as a separate repository.** The breaker is impossible, but the
-*narrower* goal — reduce how often compaction fires, so a failing compaction has
-fewer opportunities to fail — is reachable, and it was built.
+**Status: built, measured, and found not to work. The recommendation is retracted.**
 
-It hooks the session event plane rather than the compaction service, so it stays
-orthogonal to the mutually exclusive backend set in
-[`PRIOR-ART.md` §2.1](PRIOR-ART.md). It is a service class with a `static Config`,
-and it prunes tool results earlier than compaction would.
+The breaker is impossible, but a *narrower* goal looked reachable: reduce how
+often compaction fires, so a failing compaction has fewer opportunities to fail.
+A plugin was built for it. **Measurement then showed its premise was false.**
 
-**Its own README states, in its opening paragraph, that it is deliberately
-incomplete.** That is not modesty — it is the accurate description of a plugin
-that reduces trigger frequency and cannot add backoff. The distinction between
-"fewer chances to fail" and "safe failure" is the whole point, and conflating them
-would be the failure this repository exists to document.
+Two findings, both reproducible:
 
-**Still not fixed by it:**
+1. **`compaction-basic` already prunes before it compacts, and re-measures.**
+   `compactIfNeeded` calls `prune.pruneSession(session)` at `index.ts:297` and
+   re-measures at `:298` before writing `compaction/start`. There is no "earlier"
+   left to be — the plugin's strategy was to do, sooner, a thing already done.
+2. **Replaying the recorded token trajectories, granting the plugin its effect,
+   7 of 8 compactions remain unavoidable** — at each of those boundaries the
+   pruner's remaining reach is exactly 0. The one avoidance sits in the only
+   session where the pruner had never run, and cleared a 258-token crossing.
 
-| Gap | Why the plugin cannot close it |
+And in a live session it cannot execute at all: `Session.append()` sets its
+re-entrancy guard before dispatching `session/event`, so a prune attempted from
+that listener throws `session append cannot reenter while another append is being
+published`. The plugin's own `catch` swallows it, making the symptom silence.
+
+**This is recorded rather than deleted because it is the failure mode this
+repository documents.** A plausible mechanism, tested in pieces, that does not
+survive contact with the whole system — the same "verified the part, reported the
+whole" error behind the four corrections in `verify-config/`. The premise was
+never checked against `compaction-basic`'s own ordering.
+
+See [`guide/quick-guide.md` §7](guide/quick-guide.md) for the retraction, and the
+plugin repository's `REPORT.md` for the measurement and its independent
+re-derivation from raw bytes.
+
+**Still not fixed by anything a plugin can do:**
+
+| Gap | Why no plugin can close it |
 |---|---|
 | Backoff after a failed compaction | Requires suppressing an attempt, which no extension point can do [O24] |
 | Byte-bounded summarization | The request is assembled inside `summarizer.ts`; a plugin sees the stream, not the message array |
